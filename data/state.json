@@ -1,0 +1,599 @@
+{
+  "updatedAt": "2026-06-28T17:51:40+00:00",
+  "source": "placeholder",
+  "currentRound": "R32",
+  "players": [
+    {
+      "id": "paul",
+      "name": "Paul",
+      "color": "#e6394a",
+      "teams": [
+        "Spain",
+        "Ecuador",
+        "Algeria",
+        "Scotland",
+        "Panama"
+      ]
+    },
+    {
+      "id": "caoimh",
+      "name": "Caoimh",
+      "color": "#f59f00",
+      "teams": [
+        "France",
+        "Mexico",
+        "Uruguay",
+        "Paraguay",
+        "Iran",
+        "Uzbekistan"
+      ]
+    },
+    {
+      "id": "fran",
+      "name": "Fran",
+      "color": "#2f9e44",
+      "teams": [
+        "England",
+        "Norway",
+        "Japan",
+        "Türkiye",
+        "Canada",
+        "Egypt",
+        "DR Congo",
+        "Jordan",
+        "Saudi Arabia",
+        "Haiti"
+      ]
+    },
+    {
+      "id": "kev",
+      "name": "Kev",
+      "color": "#1c7ed6",
+      "teams": [
+        "Portugal",
+        "Belgium",
+        "Morocco",
+        "USA",
+        "Sweden",
+        "Czechia",
+        "Ghana",
+        "Cape Verde",
+        "Qatar",
+        "Curaçao"
+      ]
+    },
+    {
+      "id": "dave",
+      "name": "Dave",
+      "color": "#7048e8",
+      "teams": [
+        "Argentina",
+        "Germany",
+        "Senegal",
+        "Croatia",
+        "Bosnia",
+        "Korea Republic",
+        "Tunisia"
+      ]
+    },
+    {
+      "id": "dec",
+      "name": "Dec",
+      "color": "#0ca678",
+      "teams": [
+        "Brazil",
+        "Netherlands",
+        "Colombia",
+        "Switzerland",
+        "Austria",
+        "Ivory Coast",
+        "Australia",
+        "Iraq",
+        "New Zealand",
+        "South Africa"
+      ]
+    }
+  ],
+  "teams": {
+    "Spain": {
+      "owner": "paul",
+      "winProb": 0.04592,
+      "alive": true
+    },
+    "Ecuador": {
+      "owner": "paul",
+      "winProb": 0.01837,
+      "alive": true
+    },
+    "Algeria": {
+      "owner": "paul",
+      "winProb": 0.01429,
+      "alive": true
+    },
+    "Scotland": {
+      "owner": "paul",
+      "winProb": 0.01327,
+      "alive": true
+    },
+    "Panama": {
+      "owner": "paul",
+      "winProb": 0.00918,
+      "alive": true
+    },
+    "France": {
+      "owner": "caoimh",
+      "winProb": 0.0449,
+      "alive": true
+    },
+    "Mexico": {
+      "owner": "caoimh",
+      "winProb": 0.02347,
+      "alive": true
+    },
+    "Uruguay": {
+      "owner": "caoimh",
+      "winProb": 0.02959,
+      "alive": true
+    },
+    "Paraguay": {
+      "owner": "caoimh",
+      "winProb": 0.01429,
+      "alive": true
+    },
+    "Iran": {
+      "owner": "caoimh",
+      "winProb": 0.01531,
+      "alive": true
+    },
+    "Uzbekistan": {
+      "owner": "caoimh",
+      "winProb": 0.01122,
+      "alive": true
+    },
+    "England": {
+      "owner": "fran",
+      "winProb": 0.04337,
+      "alive": true
+    },
+    "Norway": {
+      "owner": "fran",
+      "winProb": 0.02449,
+      "alive": true
+    },
+    "Japan": {
+      "owner": "fran",
+      "winProb": 0.02296,
+      "alive": true
+    },
+    "Türkiye": {
+      "owner": "fran",
+      "winProb": 0.01939,
+      "alive": true
+    },
+    "Canada": {
+      "owner": "fran",
+      "winProb": 0.0148,
+      "alive": true
+    },
+    "Egypt": {
+      "owner": "fran",
+      "winProb": 0.01582,
+      "alive": true
+    },
+    "DR Congo": {
+      "owner": "fran",
+      "winProb": 0.01173,
+      "alive": true
+    },
+    "Jordan": {
+      "owner": "fran",
+      "winProb": 0.00816,
+      "alive": true
+    },
+    "Saudi Arabia": {
+      "owner": "fran",
+      "winProb": 0.01122,
+      "alive": true
+    },
+    "Haiti": {
+      "owner": "fran",
+      "winProb": 0.00612,
+      "alive": true
+    },
+    "Portugal": {
+      "owner": "kev",
+      "winProb": 0.04082,
+      "alive": true
+    },
+    "Belgium": {
+      "owner": "kev",
+      "winProb": 0.03061,
+      "alive": true
+    },
+    "Morocco": {
+      "owner": "kev",
+      "winProb": 0.02755,
+      "alive": true
+    },
+    "USA": {
+      "owner": "kev",
+      "winProb": 0.02245,
+      "alive": true
+    },
+    "Sweden": {
+      "owner": "kev",
+      "winProb": 0.01786,
+      "alive": true
+    },
+    "Czechia": {
+      "owner": "kev",
+      "winProb": 0.01633,
+      "alive": true
+    },
+    "Ghana": {
+      "owner": "kev",
+      "winProb": 0.01378,
+      "alive": true
+    },
+    "Cape Verde": {
+      "owner": "kev",
+      "winProb": 0.00867,
+      "alive": true
+    },
+    "Qatar": {
+      "owner": "kev",
+      "winProb": 0.01071,
+      "alive": true
+    },
+    "Curaçao": {
+      "owner": "kev",
+      "winProb": 0.00561,
+      "alive": true
+    },
+    "Argentina": {
+      "owner": "dave",
+      "winProb": 0.04694,
+      "alive": true
+    },
+    "Germany": {
+      "owner": "dave",
+      "winProb": 0.0398,
+      "alive": true
+    },
+    "Senegal": {
+      "owner": "dave",
+      "winProb": 0.02194,
+      "alive": true
+    },
+    "Croatia": {
+      "owner": "dave",
+      "winProb": 0.02806,
+      "alive": true
+    },
+    "Bosnia": {
+      "owner": "dave",
+      "winProb": 0.01276,
+      "alive": true
+    },
+    "Korea Republic": {
+      "owner": "dave",
+      "winProb": 0.01735,
+      "alive": true
+    },
+    "Tunisia": {
+      "owner": "dave",
+      "winProb": 0.01224,
+      "alive": true
+    },
+    "Brazil": {
+      "owner": "dec",
+      "winProb": 0.04388,
+      "alive": true
+    },
+    "Netherlands": {
+      "owner": "dec",
+      "winProb": 0.03776,
+      "alive": true
+    },
+    "Colombia": {
+      "owner": "dec",
+      "winProb": 0.02857,
+      "alive": true
+    },
+    "Switzerland": {
+      "owner": "dec",
+      "winProb": 0.02143,
+      "alive": true
+    },
+    "Austria": {
+      "owner": "dec",
+      "winProb": 0.01888,
+      "alive": true
+    },
+    "Ivory Coast": {
+      "owner": "dec",
+      "winProb": 0.01684,
+      "alive": true
+    },
+    "Australia": {
+      "owner": "dec",
+      "winProb": 0.01531,
+      "alive": true
+    },
+    "Iraq": {
+      "owner": "dec",
+      "winProb": 0.00918,
+      "alive": true
+    },
+    "New Zealand": {
+      "owner": "dec",
+      "winProb": 0.00714,
+      "alive": true
+    },
+    "South Africa": {
+      "owner": "dec",
+      "winProb": 0.00969,
+      "alive": true
+    }
+  },
+  "bracket": {
+    "R32": [
+      {
+        "id": "r32-1",
+        "teamA": "Argentina",
+        "teamB": "Algeria",
+        "probA": 0.767,
+        "probB": 0.233,
+        "winner": null
+      },
+      {
+        "id": "r32-2",
+        "teamA": "Spain",
+        "teamB": "Paraguay",
+        "probA": 0.763,
+        "probB": 0.237,
+        "winner": null
+      },
+      {
+        "id": "r32-3",
+        "teamA": "France",
+        "teamB": "Canada",
+        "probA": 0.752,
+        "probB": 0.248,
+        "winner": null
+      },
+      {
+        "id": "r32-4",
+        "teamA": "Brazil",
+        "teamB": "Iran",
+        "probA": 0.741,
+        "probB": 0.259,
+        "winner": null
+      },
+      {
+        "id": "r32-5",
+        "teamA": "England",
+        "teamB": "Australia",
+        "probA": 0.739,
+        "probB": 0.261,
+        "winner": null
+      },
+      {
+        "id": "r32-6",
+        "teamA": "Portugal",
+        "teamB": "Egypt",
+        "probA": 0.721,
+        "probB": 0.279,
+        "winner": null
+      },
+      {
+        "id": "r32-7",
+        "teamA": "Germany",
+        "teamB": "Czechia",
+        "probA": 0.709,
+        "probB": 0.291,
+        "winner": null
+      },
+      {
+        "id": "r32-8",
+        "teamA": "Netherlands",
+        "teamB": "Ivory Coast",
+        "probA": 0.692,
+        "probB": 0.308,
+        "winner": null
+      },
+      {
+        "id": "r32-9",
+        "teamA": "Belgium",
+        "teamB": "Korea Republic",
+        "probA": 0.638,
+        "probB": 0.362,
+        "winner": null
+      },
+      {
+        "id": "r32-10",
+        "teamA": "Uruguay",
+        "teamB": "Sweden",
+        "probA": 0.624,
+        "probB": 0.376,
+        "winner": null
+      },
+      {
+        "id": "r32-11",
+        "teamA": "Colombia",
+        "teamB": "Ecuador",
+        "probA": 0.609,
+        "probB": 0.391,
+        "winner": null
+      },
+      {
+        "id": "r32-12",
+        "teamA": "Croatia",
+        "teamB": "Austria",
+        "probA": 0.598,
+        "probB": 0.402,
+        "winner": null
+      },
+      {
+        "id": "r32-13",
+        "teamA": "Morocco",
+        "teamB": "Türkiye",
+        "probA": 0.587,
+        "probB": 0.413,
+        "winner": null
+      },
+      {
+        "id": "r32-14",
+        "teamA": "Norway",
+        "teamB": "Switzerland",
+        "probA": 0.533,
+        "probB": 0.467,
+        "winner": null
+      },
+      {
+        "id": "r32-15",
+        "teamA": "Mexico",
+        "teamB": "Senegal",
+        "probA": 0.517,
+        "probB": 0.483,
+        "winner": null
+      },
+      {
+        "id": "r32-16",
+        "teamA": "Japan",
+        "teamB": "USA",
+        "probA": 0.506,
+        "probB": 0.494,
+        "winner": null
+      }
+    ],
+    "R16": [
+      {
+        "id": "r16-1",
+        "teamA": null,
+        "teamB": null,
+        "probA": null,
+        "probB": null,
+        "winner": null
+      },
+      {
+        "id": "r16-2",
+        "teamA": null,
+        "teamB": null,
+        "probA": null,
+        "probB": null,
+        "winner": null
+      },
+      {
+        "id": "r16-3",
+        "teamA": null,
+        "teamB": null,
+        "probA": null,
+        "probB": null,
+        "winner": null
+      },
+      {
+        "id": "r16-4",
+        "teamA": null,
+        "teamB": null,
+        "probA": null,
+        "probB": null,
+        "winner": null
+      },
+      {
+        "id": "r16-5",
+        "teamA": null,
+        "teamB": null,
+        "probA": null,
+        "probB": null,
+        "winner": null
+      },
+      {
+        "id": "r16-6",
+        "teamA": null,
+        "teamB": null,
+        "probA": null,
+        "probB": null,
+        "winner": null
+      },
+      {
+        "id": "r16-7",
+        "teamA": null,
+        "teamB": null,
+        "probA": null,
+        "probB": null,
+        "winner": null
+      },
+      {
+        "id": "r16-8",
+        "teamA": null,
+        "teamB": null,
+        "probA": null,
+        "probB": null,
+        "winner": null
+      }
+    ],
+    "QF": [
+      {
+        "id": "qf-1",
+        "teamA": null,
+        "teamB": null,
+        "probA": null,
+        "probB": null,
+        "winner": null
+      },
+      {
+        "id": "qf-2",
+        "teamA": null,
+        "teamB": null,
+        "probA": null,
+        "probB": null,
+        "winner": null
+      },
+      {
+        "id": "qf-3",
+        "teamA": null,
+        "teamB": null,
+        "probA": null,
+        "probB": null,
+        "winner": null
+      },
+      {
+        "id": "qf-4",
+        "teamA": null,
+        "teamB": null,
+        "probA": null,
+        "probB": null,
+        "winner": null
+      }
+    ],
+    "SF": [
+      {
+        "id": "sf-1",
+        "teamA": null,
+        "teamB": null,
+        "probA": null,
+        "probB": null,
+        "winner": null
+      },
+      {
+        "id": "sf-2",
+        "teamA": null,
+        "teamB": null,
+        "probA": null,
+        "probB": null,
+        "winner": null
+      }
+    ],
+    "F": [
+      {
+        "id": "f-1",
+        "teamA": null,
+        "teamB": null,
+        "probA": null,
+        "probB": null,
+        "winner": null
+      }
+    ]
+  }
+}

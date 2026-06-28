@@ -1,0 +1,6 @@
+# local / secrets — never commit the API key
+.env
+*.local
+__pycache__/
+*.pyc
+.claude/launch.json
