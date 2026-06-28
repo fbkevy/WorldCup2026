@@ -28,7 +28,8 @@ import urllib.parse
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import wc_lib
 
-SPORT = "soccer_fifa_world_cup"
+SPORT = "soccer_fifa_world_cup"            # individual match (h2h) odds
+WINNER_SPORT = "soccer_fifa_world_cup_winner"  # outright tournament winner (separate key!)
 BASE = "https://api.the-odds-api.com/v4"
 
 # Scheduling: the workflow ticks every 30 min, but we only spend API credits at
@@ -53,6 +54,8 @@ NAME_MAP = {
     "Congo DR": "DR Congo",
     "Cape Verde": "Cape Verde",
     "Cabo Verde": "Cape Verde",
+    "Bosnia & Herzegovina": "Bosnia",
+    "Bosnia and Herzegovina": "Bosnia",
 }
 
 
@@ -81,7 +84,7 @@ def implied_no_vig(price_by_name):
 
 
 def fetch_outrights(regions):
-    data = api_get(f"/sports/{SPORT}/odds", {
+    data = api_get(f"/sports/{WINNER_SPORT}/odds", {
         "regions": regions, "markets": "outrights", "oddsFormat": "decimal",
     })
     # Average each team's implied prob across bookmakers, then renormalize.
