@@ -8,6 +8,10 @@ Run:  python scripts/build_sample.py
 import json
 import datetime
 import pathlib
+import sys
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import wc_lib
 
 # --- Players, colours, and their teams -------------------------------------
 PLAYERS = [
@@ -89,14 +93,17 @@ def main():
         pa = sa / (sa + sb)
         return round(pa, 3), round(1 - pa, 3)
 
+    # Mark the first 4 R32 matches as decided (favourite wins) so the skeleton
+    # demonstrates eliminations + auto-advance into R16.
     r32 = []
     for i, (a, b) in enumerate(pairs):
         pa, pb = h2h(a, b)
+        winner = "A" if i < 4 else None
         r32.append({
             "id": f"r32-{i+1}",
             "teamA": a, "teamB": b,
             "probA": pa, "probB": pb,
-            "winner": None,
+            "winner": winner,
         })
 
     def empty_round(name, count):
@@ -121,6 +128,8 @@ def main():
         "teams": teams,
         "bracket": bracket,
     }
+
+    wc_lib.advance(state)  # apply eliminations + advance winners into R16
 
     out = pathlib.Path(__file__).resolve().parent.parent / "data" / "state.json"
     out.parent.mkdir(parents=True, exist_ok=True)

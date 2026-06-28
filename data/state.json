@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-06-28T17:51:40+00:00",
+  "updatedAt": "2026-06-28T18:06:59+00:00",
   "source": "placeholder",
   "currentRound": "R32",
   "players": [
@@ -108,7 +108,7 @@
     "Algeria": {
       "owner": "paul",
       "winProb": 0.01429,
-      "alive": true
+      "alive": false
     },
     "Scotland": {
       "owner": "paul",
@@ -138,12 +138,12 @@
     "Paraguay": {
       "owner": "caoimh",
       "winProb": 0.01429,
-      "alive": true
+      "alive": false
     },
     "Iran": {
       "owner": "caoimh",
       "winProb": 0.01531,
-      "alive": true
+      "alive": false
     },
     "Uzbekistan": {
       "owner": "caoimh",
@@ -173,7 +173,7 @@
     "Canada": {
       "owner": "fran",
       "winProb": 0.0148,
-      "alive": true
+      "alive": false
     },
     "Egypt": {
       "owner": "fran",
@@ -344,7 +344,7 @@
         "teamB": "Algeria",
         "probA": 0.767,
         "probB": 0.233,
-        "winner": null
+        "winner": "A"
       },
       {
         "id": "r32-2",
@@ -352,7 +352,7 @@
         "teamB": "Paraguay",
         "probA": 0.763,
         "probB": 0.237,
-        "winner": null
+        "winner": "A"
       },
       {
         "id": "r32-3",
@@ -360,7 +360,7 @@
         "teamB": "Canada",
         "probA": 0.752,
         "probB": 0.248,
-        "winner": null
+        "winner": "A"
       },
       {
         "id": "r32-4",
@@ -368,7 +368,7 @@
         "teamB": "Iran",
         "probA": 0.741,
         "probB": 0.259,
-        "winner": null
+        "winner": "A"
       },
       {
         "id": "r32-5",
@@ -470,16 +470,16 @@
     "R16": [
       {
         "id": "r16-1",
-        "teamA": null,
-        "teamB": null,
+        "teamA": "Argentina",
+        "teamB": "Spain",
         "probA": null,
         "probB": null,
         "winner": null
       },
       {
         "id": "r16-2",
-        "teamA": null,
-        "teamB": null,
+        "teamA": "France",
+        "teamB": "Brazil",
         "probA": null,
         "probB": null,
         "winner": null

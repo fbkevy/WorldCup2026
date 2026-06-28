@@ -25,6 +25,9 @@ import pathlib
 import urllib.request
 import urllib.parse
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import wc_lib
+
 SPORT = "soccer_fifa_world_cup"
 BASE = "https://api.the-odds-api.com/v4"
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -154,6 +157,9 @@ def main():
                 m["probB"] = probs.get(canon(b))
                 matched += 1
     print(f"Updated h2h for {matched} live matches", file=sys.stderr)
+
+    # Keep eliminations + bracket advancement consistent on every refresh.
+    wc_lib.advance(state)
 
     state["source"] = "the-odds-api"
     state["updatedAt"] = (datetime.datetime.now(datetime.timezone.utc)
