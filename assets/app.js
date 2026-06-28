@@ -15,6 +15,24 @@ let selectedPlayer = null;
 const pct = (p) => (p == null ? "" : Math.round(p * 100) + "%");
 const $ = (sel) => document.querySelector(sel);
 
+// FIFA-style 3-letter codes so cards stay narrow. Falls back to first 3 letters.
+const ABBR = {
+  "Spain": "ESP", "Ecuador": "ECU", "Algeria": "ALG", "Scotland": "SCO",
+  "Panama": "PAN", "France": "FRA", "Mexico": "MEX", "Uruguay": "URU",
+  "Paraguay": "PAR", "Iran": "IRN", "Uzbekistan": "UZB", "England": "ENG",
+  "Norway": "NOR", "Japan": "JPN", "Türkiye": "TUR", "Canada": "CAN",
+  "Egypt": "EGY", "DR Congo": "COD", "Jordan": "JOR", "Saudi Arabia": "KSA",
+  "Haiti": "HAI", "Portugal": "POR", "Belgium": "BEL", "Morocco": "MAR",
+  "USA": "USA", "Sweden": "SWE", "Czechia": "CZE", "Ghana": "GHA",
+  "Cape Verde": "CPV", "Qatar": "QAT", "Curaçao": "CUW", "Argentina": "ARG",
+  "Germany": "GER", "Senegal": "SEN", "Croatia": "CRO", "Bosnia": "BIH",
+  "Korea Republic": "KOR", "Tunisia": "TUN", "Brazil": "BRA",
+  "Netherlands": "NED", "Colombia": "COL", "Switzerland": "SUI",
+  "Austria": "AUT", "Ivory Coast": "CIV", "Australia": "AUS", "Iraq": "IRQ",
+  "New Zealand": "NZL", "South Africa": "RSA",
+};
+const abbr = (name) => ABBR[name] || (name || "").slice(0, 3).toUpperCase();
+
 // Format a UTC ISO kickoff in the viewer's own timezone. Because the source is
 // canonical UTC, the local date is always correct even across the date line.
 const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -23,8 +41,7 @@ function localKickoff(iso) {
   const d = new Date(iso);
   if (isNaN(d)) return "";
   return d.toLocaleString(undefined, {
-    weekday: "short", day: "numeric", month: "short",
-    hour: "2-digit", minute: "2-digit",
+    day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
   });
 }
 
@@ -115,7 +132,7 @@ function ownerColor(teamName) {
 
 function teamRow(teamName, prob, match, side) {
   if (!teamName) {
-    return `<div class="team-row"><span class="team-name tbd-name">TBD</span></div>`;
+    return `<div class="team-row tbd-row"><span class="team-code tbd-name">—</span></div>`;
   }
   const team = STATE.teams[teamName];
   const decided = match.winner != null;
@@ -125,14 +142,14 @@ function teamRow(teamName, prob, match, side) {
   const cls = decided ? (isWinner ? " winner" : " loser") : "";
   // Show % only when BOTH teams known (head-to-head set) and not yet decided.
   const showProb = match.teamA && match.teamB && !decided;
+  const right = showProb
+    ? `<span class="team-prob">${pct(prob)}</span>`
+    : (decided && isWinner ? `<span class="adv" aria-label="advances">▸</span>` : "");
   return `
-    <div class="team-row${cls}${sel}" data-owner="${owner || ""}" data-team="${teamName}">
-      <span class="dot" style="background:${ownerColor(teamName)}"></span>
-      <span>
-        <span class="team-name">${teamName}</span>
-        <span class="team-owner"> · ${ownerTag(teamName)}</span>
-      </span>
-      ${showProb ? `<span class="team-prob">${pct(prob)}</span>` : ""}
+    <div class="team-row${cls}${sel}" data-owner="${owner || ""}" data-team="${teamName}"
+         title="${teamName} · ${ownerTag(teamName)}" style="--owner:${ownerColor(teamName)}">
+      <span class="team-code">${abbr(teamName)}</span>
+      ${right}
     </div>`;
 }
 

@@ -104,10 +104,11 @@ h1 { font-size: 1.15rem; margin: 0; letter-spacing: -0.02em; }
 .round-nav button.active { color: var(--text); border-color: var(--accent); }
 
 .bracket {
+  --gap: 30px;             /* gutter between rounds; connectors live here */
   display: flex;
-  gap: 18px;
+  gap: var(--gap);
   overflow-x: auto;
-  scroll-snap-type: x mandatory;
+  scroll-snap-type: x proximity;
   padding: 0 16px 8px;
   -webkit-overflow-scrolling: touch;
 }
@@ -117,45 +118,58 @@ h1 { font-size: 1.15rem; margin: 0; letter-spacing: -0.02em; }
   display: flex;
   flex-direction: column;
   justify-content: space-around;
-  gap: 12px;
-  min-width: min(86vw, 300px);
+  gap: 10px;
+  min-width: clamp(132px, 42vw, 168px);   /* narrow -> 2 rounds fit a phone */
 }
 .round-label {
   position: sticky; top: 0;
-  color: var(--muted); font-size: 0.75rem; font-weight: 700;
+  color: var(--muted); font-size: 0.72rem; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.08em;
-  padding-bottom: 4px;
+  padding-bottom: 2px;
 }
 
 .match {
+  position: relative;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: 11px;
   overflow: hidden;
-  box-shadow: var(--shadow);
 }
-.match.tbd { opacity: 0.55; }
+.match.tbd { opacity: 0.5; }
 .match-time {
-  padding: 6px 12px; font-size: 0.72rem; color: var(--muted);
+  padding: 4px 9px; font-size: 0.68rem; color: var(--muted);
   border-bottom: 1px solid var(--line); background: var(--panel-2);
-  letter-spacing: 0.02em;
 }
+
+/* ---- connector rails (drawn in the gutter between rounds) ---- */
+.round:not(:last-child) .match::after,
+.round:not(:first-child) .match::before {
+  content: ""; position: absolute; top: 50%;
+  width: calc(var(--gap) / 2); height: 2px; background: var(--line);
+}
+.round:not(:last-child) .match::after { right: calc(var(--gap) / -2); }
+.round:not(:first-child) .match::before { left: calc(var(--gap) / -2); }
+
 .team-row {
-  display: flex; align-items: center; gap: 9px;
-  padding: 11px 12px;
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px;
+  border-left: 4px solid var(--owner, transparent);
   cursor: pointer;
 }
 .team-row + .team-row { border-top: 1px solid var(--line); }
-.team-row.winner { background: rgba(47, 129, 247, 0.10); }
-.team-row.loser { opacity: 0.5; }
-.team-name { font-weight: 600; }
-.team-owner { color: var(--muted); font-size: 0.75rem; }
+.team-row.winner { background: rgba(47, 129, 247, 0.12); }
+.team-row.loser { opacity: 0.45; }
+.tbd-row { border-left-color: transparent; }
+.team-code {
+  font-weight: 800; font-size: 0.92rem; letter-spacing: 0.04em;
+}
 .team-prob {
   margin-left: auto; font-variant-numeric: tabular-nums;
-  font-weight: 700; color: var(--muted);
+  font-size: 0.82rem; font-weight: 700; color: var(--muted);
 }
 .team-row.winner .team-prob { color: var(--text); }
-.tbd-name { color: var(--muted); font-style: italic; }
+.adv { margin-left: auto; color: var(--accent); font-weight: 700; }
+.tbd-name { color: var(--muted); font-style: italic; font-weight: 600; }
 
 /* dim teams not owned by the selected player */
 body.has-selection .team-row:not(.match-team-selected) { opacity: 0.28; }
@@ -202,5 +216,5 @@ body.has-selection .team-row.loser { opacity: 0.2; }
   .standings-body { display: block !important; }
   .sheet { align-items: center; }
   .sheet-card { border-radius: 18px; }
-  .round { min-width: 280px; }
+  .round { min-width: 160px; }
 }
