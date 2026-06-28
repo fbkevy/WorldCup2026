@@ -92,7 +92,7 @@ function render() {
   $("#alive-count").textContent = aliveCount();
   renderSourceBadge();
   renderChampion();
-  updateViewToggle();
+  updateViewSeg();
   // Layout-dependent passes run after the browser lays the tree out.
   requestAnimationFrame(() => {
     if (viewMode === "bracket") drawConnectors();
@@ -102,29 +102,33 @@ function render() {
 
 function renderTree() {
   const wrap = $("#bracket");
+  wrap.classList.remove("as-funnel", "as-fixtures");
   if (viewMode === "funnel") {
     wrap.classList.add("as-funnel");
     renderFunnel();
+  } else if (viewMode === "fixtures") {
+    wrap.classList.add("as-fixtures");
+    renderFixtures();
   } else {
-    wrap.classList.remove("as-funnel");
     renderBracket();
   }
+  $("#round-nav").style.display = viewMode === "fixtures" ? "none" : "";
 }
 
 function setView(mode) {
   viewMode = mode;
   localStorage.setItem("wc-view", mode);
   renderTree();
-  updateViewToggle();
+  updateViewSeg();
   requestAnimationFrame(() => {
     if (viewMode === "bracket") drawConnectors();
     scrollToNextGame();
   });
 }
 
-function updateViewToggle() {
-  const btn = $("#view-toggle");
-  if (btn) btn.textContent = viewMode === "funnel" ? "⤢ Bracket view" : "⤓ Funnel view";
+function updateViewSeg() {
+  document.querySelectorAll("#view-seg button").forEach((b) =>
+    b.classList.toggle("active", b.dataset.view === viewMode));
 }
 
 function renderSourceBadge() {
@@ -262,10 +266,12 @@ function renderBracket() {
     lbl.addEventListener("click", () => toggleRound(key));
     col.appendChild(lbl);
 
-    matches.forEach((m) => {
+    matches.forEach((m, i) => {
       const known = m.teamA && m.teamB;
       const div = document.createElement("div");
       div.className = "match" + (known ? "" : " tbd");
+      div.dataset.round = key;
+      div.dataset.mi = i;
       div.innerHTML =
         matchHeader(m) +
         teamRow(m.teamA, m.probA, m, "A") +
@@ -299,9 +305,10 @@ function renderBracket() {
 }
 
 function toggleRound(key) {
-  const col = document.getElementById("round-" + key);
-  collapsedRounds[key] = col.classList.toggle("collapsed");
-  requestAnimationFrame(drawConnectors);
+  const el = document.getElementById("round-" + key);
+  const cls = viewMode === "funnel" ? "fcollapsed" : "collapsed";
+  collapsedRounds[key] = el.classList.toggle(cls);
+  if (viewMode === "bracket") requestAnimationFrame(drawConnectors);
 }
 
 function scrollRoundIntoView(key) {
@@ -325,13 +332,11 @@ function nextActiveMatch() {
 }
 
 function markNextGame() {
-  $("#bracket").querySelectorAll(".match.next-game")
-    .forEach((m) => m.classList.remove("next-game"));
+  const wrap = $("#bracket");
+  wrap.querySelectorAll(".match.next-game").forEach((m) => m.classList.remove("next-game"));
   const n = nextActiveMatch();
   if (!n) return null;
-  const round = document.getElementById("round-" + n.key);
-  if (!round) return null;
-  const el = round.querySelectorAll(".match")[n.i];
+  const el = wrap.querySelector(`.match[data-round="${n.key}"][data-mi="${n.i}"]`);
   if (!el) return null;
   el.classList.add("next-game");
   return el;
@@ -353,6 +358,10 @@ function championName() {
 // shape + owner stripes carry it.
 const FUNNEL_WIDTH = { R32: 86, R16: 76, QF: 66, SF: 57, F: 50 };
 
+function owns(m, pid) {
+  return STATE.teams[m.teamA]?.owner === pid || STATE.teams[m.teamB]?.owner === pid;
+}
+
 function renderFunnel() {
   const wrap = $("#bracket");
   wrap.querySelectorAll(".connectors").forEach((s) => s.remove());
@@ -361,21 +370,35 @@ function renderFunnel() {
   nav.innerHTML = "";
 
   ROUNDS.forEach(([key, label]) => {
-    const matches = STATE.bracket[key] || [];
-    const live = matches.filter((m) => m.teamA && m.teamB).length;
+    const all = STATE.bracket[key] || [];
+    // D — journey filter: when a player is selected, show only their matches.
+    const matches = selectedPlayer ? all.filter((m) => owns(m, selectedPlayer)) : all;
+    const known = matches.filter((m) => m.teamA && m.teamB);
+    const hasLive = matches.some((m) => m.teamA && m.teamB && m.winner == null);
+    // B — collapse rounds with no live game yet (or completed/past), unless the
+    // user expanded them. Rounds with a live, undecided game stay open.
+    const collapsed = key in collapsedRounds ? collapsedRounds[key] : !hasLive;
+
     const sec = document.createElement("section");
-    sec.className = "fround";
+    sec.className = "fround" + (collapsed ? " fcollapsed" : "");
     sec.id = "round-" + key;
     sec.dataset.round = key;
     sec.style.setProperty("--fw", FUNNEL_WIDTH[key] + "%");
-    sec.innerHTML = `<div class="fround-head"><span>${label}${live ? ` · ${live}` : ""}</span></div>`;
+    const count = known.length ? ` · ${known.length}` : (matches.length ? " · TBD" : "");
+    const head = document.createElement("button");
+    head.className = "fround-head";
+    head.innerHTML = `<span>${label}${count}</span><i class="chev">⌄</i>`;
+    head.addEventListener("click", () => toggleRound(key));
+    sec.appendChild(head);
 
     const box = document.createElement("div");
     box.className = "fmatches";
-    matches.forEach((m) => {
-      const known = m.teamA && m.teamB;
+    all.forEach((m, i) => {
+      if (selectedPlayer && !owns(m, selectedPlayer)) return;
       const div = document.createElement("div");
-      div.className = "match" + (known ? "" : " tbd");
+      div.className = "match" + (m.teamA && m.teamB ? "" : " tbd");
+      div.dataset.round = key;
+      div.dataset.mi = i;
       div.innerHTML =
         matchHeader(m) +
         teamRow(m.teamA, m.probA, m, "A", true) +
@@ -390,9 +413,12 @@ function renderFunnel() {
     btn.textContent = label.replace("Round of ", "R");
     btn.dataset.round = key;
     if (key === STATE.currentRound) btn.classList.add("active");
-    btn.addEventListener("click", () =>
-      document.getElementById("round-" + key)
-        .scrollIntoView({ behavior: "smooth", block: "start" }));
+    btn.addEventListener("click", () => {
+      collapsedRounds[key] = false;
+      const el = document.getElementById("round-" + key);
+      el.classList.remove("fcollapsed");
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
     nav.appendChild(btn);
   });
 
@@ -405,6 +431,70 @@ function renderFunnel() {
        <div class="champ-sub">${owner ? owner.name + " wins the draw!" : ""}</div>`
     : `🏆<div class="champ-sub">Road to the Final</div>`;
   wrap.appendChild(tro);
+
+  wrap.querySelectorAll(".team-row[data-team]").forEach((row) => {
+    row.addEventListener("click", () => openTeamSheet(row.dataset.team));
+  });
+}
+
+// "Today" / "Tomorrow" / "Sat 4 Jul" in the viewer's timezone.
+function dateLabel(iso) {
+  if (!iso) return "Date TBD";
+  const d = new Date(iso);
+  if (isNaN(d)) return "Date TBD";
+  const now = new Date();
+  const day = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate());
+  const diff = Math.round((day(d) - day(now)) / 86400000);
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Tomorrow";
+  if (diff === -1) return "Yesterday";
+  return d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+}
+
+// C — Fixtures: every known matchup in date order, grouped by day.
+function renderFixtures() {
+  const wrap = $("#bracket");
+  wrap.querySelectorAll(".connectors").forEach((s) => s.remove());
+  wrap.innerHTML = "";
+  $("#round-nav").innerHTML = "";
+
+  const list = [];
+  ROUND_KEYS.forEach((key) => {
+    (STATE.bracket[key] || []).forEach((m, i) => {
+      if (m.teamA && m.teamB && (!selectedPlayer || owns(m, selectedPlayer))) {
+        list.push({ m, key, i });
+      }
+    });
+  });
+  list.sort((a, b) =>
+    (Date.parse(a.m.kickoff) || Infinity) - (Date.parse(b.m.kickoff) || Infinity));
+
+  if (!list.length) {
+    wrap.innerHTML = `<p class="fx-empty">No fixtures yet${selectedPlayer ? " for this player" : ""}.</p>`;
+    return;
+  }
+
+  let lastDate = null;
+  list.forEach(({ m, key, i }) => {
+    const dl = dateLabel(m.kickoff);
+    if (dl !== lastDate) {
+      lastDate = dl;
+      const h = document.createElement("div");
+      h.className = "fx-date";
+      h.textContent = dl;
+      wrap.appendChild(h);
+    }
+    const div = document.createElement("div");
+    div.className = "match";
+    div.dataset.round = key;
+    div.dataset.mi = i;
+    div.innerHTML =
+      matchHeader(m) +
+      teamRow(m.teamA, m.probA, m, "A", true) +
+      teamRow(m.teamB, m.probB, m, "B", true) +
+      probBar(m);
+    wrap.appendChild(div);
+  });
 
   wrap.querySelectorAll(".team-row[data-team]").forEach((row) => {
     row.addEventListener("click", () => openTeamSheet(row.dataset.team));
@@ -534,8 +624,8 @@ function openTeamSheet(teamName) {
 // ---- wiring ----
 $("#standings-toggle").addEventListener("click", () =>
   $("#standings").classList.toggle("open"));
-$("#view-toggle").addEventListener("click", () =>
-  setView(viewMode === "funnel" ? "bracket" : "funnel"));
+document.querySelectorAll("#view-seg button").forEach((b) =>
+  b.addEventListener("click", () => setView(b.dataset.view)));
 $("#sel-chip").addEventListener("click", () => {
   if (selectedPlayer) togglePlayer(selectedPlayer);   // clears the filter
 });
