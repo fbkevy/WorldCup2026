@@ -49,6 +49,7 @@ def advance(state):
             lost = loser_team(m)
             if lost and lost in teams:
                 teams[lost]["alive"] = False
+                teams[lost]["winProb"] = 0.0
 
     # 2) Feed winners into the next round (feeder matches 2k, 2k+1 -> slot k).
     for (cur, _), (nxt, ncount) in zip(ROUND_ORDER, ROUND_ORDER[1:]):

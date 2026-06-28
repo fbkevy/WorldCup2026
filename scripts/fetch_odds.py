@@ -32,12 +32,15 @@ SPORT = "soccer_fifa_world_cup"            # individual match (h2h) odds
 WINNER_SPORT = "soccer_fifa_world_cup_winner"  # outright tournament winner (separate key!)
 BASE = "https://api.the-odds-api.com/v4"
 
-# Scheduling: the workflow ticks every 30 min, but we only spend API credits at
-# the 3x/day baseline and once ~30 min after each game finishes.
-BASELINE_HOURS = (7, 13, 19)          # UTC hours for the 3x/day refresh
-POST_GAME_DELAY_MIN = 150             # minutes after kickoff ≈ 30 min post full-time
-                                      # (covers half-time + stoppage; raise toward
-                                      # ~180 if you want to clear extra-time games)
+# Scheduling: the workflow ticks every 30 min. We only spend API credits when a
+# game is plausibly finishing (poll scores to get the real result — robust to
+# extra time / penalties via the API's `completed` flag) and at a 3x/day odds
+# baseline. Outside those windows the tick exits without any API call.
+BASELINE_HOURS = (7, 13, 19)          # UTC hours for the 3x/day odds refresh
+SCORE_CHECK_MIN = 110                 # start polling a game's result this many
+                                      # minutes after kickoff (~ full time)
+SCORE_CHECK_MAX = 260                 # stop polling after this (covers ET + pens
+                                      # + result-reporting lag), then needs manual
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 STATE_PATH = ROOT / "data" / "state.json"
 
@@ -148,54 +151,67 @@ def parse_iso(s):
         return None
 
 
-def should_fetch(state, now):
-    """Decide whether to spend API credits this tick.
+def fetch_scores():
+    """Recently completed + live games (daysFrom=3). Costs 2 credits."""
+    return api_get(f"/sports/{SPORT}/scores", {"daysFrom": 3})
 
-    Returns (do_fetch: bool, reasons: list[str], due_match_ids: list[str]).
-    Fetch when: forced, OR within a 3x/day baseline window, OR a game finished
-    ~30 min ago that we haven't refreshed for yet (tracked in state.postFetched).
+
+def apply_scores(state, events):
+    """Set winner + score on any undecided bracket match that has finished.
+
+    Uses the API `completed` flag, so extra time / penalties are handled (the
+    game just shows as completed). A completed *level* score means a shootout we
+    can't read from the score line — left for manual entry.
+    Returns the list of match ids newly decided.
     """
-    reasons = []
-    if os.environ.get("FORCE_FETCH") or "--force" in sys.argv:
-        return True, ["forced"], []
+    finished = {}
+    for e in events:
+        if not e.get("completed"):
+            continue
+        sc = {canon(s["name"]): s.get("score") for s in (e.get("scores") or [])}
+        if len(sc) == 2:
+            finished[frozenset(sc)] = sc
 
-    if now.hour in BASELINE_HOURS and now.minute < 30:
-        reasons.append("baseline")
-
-    done = set(state.get("postFetched", []))
-    due = []
+    newly = []
     for rnd in state["bracket"].values():
         for m in rnd:
-            ko = parse_iso(m.get("kickoff"))
-            if ko and m["id"] not in done:
-                age_min = (now - ko).total_seconds() / 60
-                if age_min >= POST_GAME_DELAY_MIN:
-                    due.append(m["id"])
-    if due:
-        reasons.append(f"post-game({len(due)})")
+            a, b = m.get("teamA"), m.get("teamB")
+            if not (a and b) or m.get("winner") is not None:
+                continue
+            sc = finished.get(frozenset({canon(a), canon(b)}))
+            if not sc:
+                continue
+            try:
+                sa, sb = int(sc[canon(a)]), int(sc[canon(b)])
+            except (TypeError, ValueError, KeyError):
+                continue
+            m["score"] = f"{sa}–{sb}"
+            if sa != sb:
+                m["winner"] = "A" if sa > sb else "B"
+                newly.append(m["id"])
+                print(f"Result: {a} {sa}-{sb} {b} -> {m['winner']}", file=sys.stderr)
+            else:
+                print(f"NOTE: {a} v {b} completed level {sa}-{sb} "
+                      f"(penalties?) — set winner manually", file=sys.stderr)
+    return newly
 
-    return bool(reasons), reasons, due
+
+def games_finishing(state, now):
+    """Ids of undecided, known matches currently in their result-polling window."""
+    ids = []
+    for rnd in state["bracket"].values():
+        for m in rnd:
+            if m.get("teamA") and m.get("teamB") and m.get("winner") is None:
+                ko = parse_iso(m.get("kickoff"))
+                if ko:
+                    age = (now - ko).total_seconds() / 60
+                    if SCORE_CHECK_MIN <= age <= SCORE_CHECK_MAX:
+                        ids.append(m["id"])
+    return ids
 
 
-def main():
-    state = json.loads(STATE_PATH.read_text(encoding="utf-8"))
-    now = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
-
-    do_fetch, reasons, due = should_fetch(state, now)
-    if not do_fetch:
-        print("Nothing due — skipping API call (no credits spent).", file=sys.stderr)
-        return
-    print("Fetching. Reasons:", ", ".join(reasons), file=sys.stderr)
-
-    if not os.environ.get("ODDS_API_KEY"):
-        print("ERROR: ODDS_API_KEY not set", file=sys.stderr)
-        sys.exit(1)
-
-    # Single region by default to conserve the free 500 credits/month; override
-    # with ODDS_REGIONS (e.g. "uk,eu") if you have headroom.
-    regions = os.environ.get("ODDS_REGIONS", "uk")
-
-    # 1) Outright winner -> tournament-win probability per team
+def fetch_and_apply_odds(state, regions):
+    """Refresh outright + h2h probabilities into state (in place)."""
     win = fetch_outrights(regions)
     updated = 0
     for team, info in state["teams"].items():
@@ -203,20 +219,12 @@ def main():
             info["winProb"] = round(win[team], 5)
             updated += 1
     print(f"Updated winProb for {updated} teams", file=sys.stderr)
-
-    # Diagnostic: flag still-alive teams that got NO odds (likely a name
-    # mismatch -> add them to NAME_MAP). Helps debug the first live run.
     missing = sorted(t for t, i in state["teams"].items()
                      if i.get("alive", True) and t not in win)
     if missing:
         print("WARNING: no odds matched for alive teams (check NAME_MAP): "
               + ", ".join(missing), file=sys.stderr)
-    extra = sorted(set(win) - set(state["teams"]))
-    if extra:
-        print("NOTE: API returned teams not in our list: "
-              + ", ".join(extra), file=sys.stderr)
 
-    # 2) H2H -> probabilities for bracket matches whose teams are both set
     h2h = fetch_match_h2h(regions)
     matched = 0
     for rnd in state["bracket"].values():
@@ -224,29 +232,61 @@ def main():
             a, b = m.get("teamA"), m.get("teamB")
             if not (a and b) or m.get("winner") is not None:
                 continue
-            key = frozenset({canon(a), canon(b)})
-            if key in h2h:
-                probs = h2h[key]["probs"]
-                m["probA"] = probs.get(canon(a))
-                m["probB"] = probs.get(canon(b))
-                if h2h[key].get("kickoff"):
-                    m["kickoff"] = h2h[key]["kickoff"]
+            entry = h2h.get(frozenset({canon(a), canon(b)}))
+            if entry:
+                m["probA"] = entry["probs"].get(canon(a))
+                m["probB"] = entry["probs"].get(canon(b))
+                if entry.get("kickoff"):
+                    m["kickoff"] = entry["kickoff"]
                 matched += 1
     print(f"Updated h2h for {matched} live matches", file=sys.stderr)
 
-    # Keep eliminations + bracket advancement consistent on every refresh.
+
+def main():
+    state = json.loads(STATE_PATH.read_text(encoding="utf-8"))
+    now = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
+    forced = bool(os.environ.get("FORCE_FETCH")) or "--force" in sys.argv
+    have_key = bool(os.environ.get("ODDS_API_KEY"))
+    regions = os.environ.get("ODDS_REGIONS", "uk")
+
+    finishing = games_finishing(state, now)
+    baseline = now.hour in BASELINE_HOURS and now.minute < 30
+
+    if not have_key and (forced or finishing or baseline):
+        print("ERROR: ODDS_API_KEY not set", file=sys.stderr)
+        sys.exit(1)
+
+    changed = False
+    newly = []
+
+    # 1) Poll results when a game is finishing (or forced) -> auto-set winners.
+    if have_key and (finishing or forced):
+        print(f"Checking results for {len(finishing)} finishing game(s)"
+              f"{' (forced)' if forced else ''}", file=sys.stderr)
+        newly = apply_scores(state, fetch_scores())
+        if newly:
+            changed = True
+
+    # 2) Refresh odds at the baseline, when forced, or when a result just landed
+    #    (so standings/probabilities reflect the new bracket).
+    if have_key and (baseline or forced or newly):
+        fetch_and_apply_odds(state, regions)
+        changed = True
+
+    if not (forced or finishing or baseline):
+        print("Nothing due — no API call.", file=sys.stderr)
+
+    # Eliminations + advancement stay consistent (cheap, idempotent).
     wc_lib.advance(state)
 
-    # Record one-shot post-game fetches so each finished game is only refreshed
-    # once (robust to GitHub's cron jitter / double ticks).
-    if due:
-        state["postFetched"] = sorted(set(state.get("postFetched", [])) | set(due))
-
-    state["source"] = "the-odds-api"
-    state["updatedAt"] = now.isoformat()
-    STATE_PATH.write_text(json.dumps(state, indent=2, ensure_ascii=False),
-                          encoding="utf-8")
-    print("Wrote", STATE_PATH, file=sys.stderr)
+    if changed:
+        state["source"] = "the-odds-api"
+        state["updatedAt"] = now.isoformat()
+        STATE_PATH.write_text(json.dumps(state, indent=2, ensure_ascii=False),
+                              encoding="utf-8")
+        print("Wrote", STATE_PATH, file=sys.stderr)
+    else:
+        print("No state change — not writing.", file=sys.stderr)
 
 
 if __name__ == "__main__":

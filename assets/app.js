@@ -37,6 +37,16 @@ const ABBR = {
 };
 const abbr = (name) => ABBR[name] || (name || "").slice(0, 3).toUpperCase();
 
+// Header line on a match card: kickoff (local TZ) and, once played, the score.
+function matchHeader(m) {
+  if (!m.kickoff && !m.score) return "";
+  const decided = m.winner != null;
+  const parts = [];
+  if (m.kickoff) parts.push((decided ? "✓ " : "") + localKickoff(m.kickoff));
+  if (m.score) parts.push(`<span class="score">${m.score}</span>`);
+  return `<div class="match-time">${parts.join(" · ")}</div>`;
+}
+
 // Format a UTC ISO kickoff in the viewer's own timezone. Because the source is
 // canonical UTC, the local date is always correct even across the date line.
 const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -71,7 +81,9 @@ function aliveCount() {
 function render() {
   renderStandings();
   renderTree();
-  $("#updated-at").textContent = new Date(STATE.updatedAt).toLocaleString();
+  $("#updated-at").textContent = new Date(STATE.updatedAt).toLocaleString(undefined, {
+    day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+  });
   $("#alive-count").textContent = aliveCount();
   renderSourceBadge();
   renderChampion();
@@ -138,7 +150,7 @@ function renderStandings() {
   ranked.forEach(({ p, prob }, i) => {
     const aliveTeams = p.teams.filter((t) => STATE.teams[t]?.alive).length;
     const li = document.createElement("li");
-    li.className = "standings-row" + (prob <= 0 ? " out" : "") +
+    li.className = "standings-row" + (aliveTeams === 0 ? " eliminated" : "") +
       (selectedPlayer === p.id ? " selected" : "");
     li.innerHTML = `
       <span class="rank">${i + 1}</span>
@@ -181,13 +193,14 @@ function teamRow(teamName, prob, match, side, full) {
   const right = showProb
     ? `<span class="team-prob">${pct(prob)}</span>`
     : (decided && isWinner ? `<span class="adv" aria-label="advances">▸</span>` : "");
-  const label = full
+  const codeOrName = full
     ? `<span class="team-code">${abbr(teamName)}</span><span class="team-full">${teamName}</span>`
     : `<span class="team-code">${abbr(teamName)}</span>`;
+  const own = `<span class="team-own">${ownerTag(teamName)}</span>`;
   return `
     <div class="team-row${cls}${sel}" data-owner="${owner || ""}" data-team="${teamName}"
          title="${teamName} · ${ownerTag(teamName)}" style="--owner:${ownerColor(teamName)}">
-      ${label}
+      <span class="team-label">${codeOrName}${own}</span>
       ${right}
     </div>`;
 }
@@ -198,6 +211,20 @@ const ROUND_KEYS = ROUNDS.map((r) => r[0]);
 function roundCompleted(key) {
   const ms = (STATE.bracket[key] || []).filter((m) => m.teamA && m.teamB);
   return ms.length > 0 && ms.every((m) => m.winner != null);
+}
+
+// A slim two-tone bar showing the win-probability split (owner colours).
+function probBar(m) {
+  if (!(m.teamA && m.teamB)) return "";
+  const ca = ownerColor(m.teamA), cb = ownerColor(m.teamB);
+  if (m.winner) {
+    const c = m.winner === "A" ? ca : cb;
+    return `<div class="prob-bar"><span style="width:100%;background:${c}"></span></div>`;
+  }
+  const pa = m.probA != null ? m.probA : 0.5;
+  return `<div class="prob-bar">
+    <span style="width:${(pa * 100).toFixed(1)}%;background:${ca}"></span>
+    <span style="width:${((1 - pa) * 100).toFixed(1)}%;background:${cb}"></span></div>`;
 }
 
 function renderBracket() {
@@ -228,14 +255,11 @@ function renderBracket() {
       const known = m.teamA && m.teamB;
       const div = document.createElement("div");
       div.className = "match" + (known ? "" : " tbd");
-      const decided = m.winner != null;
-      const timeLine = m.kickoff
-        ? `<div class="match-time">${decided ? "✓ " : ""}${localKickoff(m.kickoff)}</div>`
-        : "";
       div.innerHTML =
-        timeLine +
+        matchHeader(m) +
         teamRow(m.teamA, m.probA, m, "A") +
-        teamRow(m.teamB, m.probB, m, "B");
+        teamRow(m.teamB, m.probB, m, "B") +
+        probBar(m);
       col.appendChild(div);
     });
     wrap.appendChild(col);
@@ -247,8 +271,13 @@ function renderBracket() {
     btn.addEventListener("click", () => {
       collapsedRounds[key] = false;            // expand if it was collapsed
       document.getElementById("round-" + key).classList.remove("collapsed");
-      scrollRoundIntoView(key);
-      requestAnimationFrame(drawConnectors);
+      requestAnimationFrame(() => {
+        drawConnectors();
+        const round = document.getElementById("round-" + key);
+        const target = round.querySelector(".match.next-game") ||
+                       round.querySelector(".match") || round;
+        target.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+      });
     });
     nav.appendChild(btn);
   });
@@ -331,14 +360,11 @@ function renderFunnel() {
       const known = m.teamA && m.teamB;
       const div = document.createElement("div");
       div.className = "match" + (known ? "" : " tbd");
-      const decided = m.winner != null;
-      const timeLine = m.kickoff
-        ? `<div class="match-time">${decided ? "✓ " : ""}${localKickoff(m.kickoff)}</div>`
-        : "";
       div.innerHTML =
-        timeLine +
+        matchHeader(m) +
         teamRow(m.teamA, m.probA, m, "A", true) +
-        teamRow(m.teamB, m.probB, m, "B", true);
+        teamRow(m.teamB, m.probB, m, "B", true) +
+        probBar(m);
       box.appendChild(div);
     });
     sec.appendChild(box);
@@ -419,6 +445,12 @@ function drawConnectors() {
           const wt = m.winner === "A" ? m.teamA : m.teamB;
           const owner = STATE.teams[wt] && PLAYER_BY_ID[STATE.teams[wt].owner];
           if (owner) { color = owner.color; w = 3; op = 1; }
+        } else if (m && m.teamA && m.teamB) {
+          // Same owner on both sides -> that player advances no matter what.
+          const oa = STATE.teams[m.teamA]?.owner, ob = STATE.teams[m.teamB]?.owner;
+          if (oa && oa === ob && PLAYER_BY_ID[oa]) {
+            color = PLAYER_BY_ID[oa].color; w = 2.5; op = 0.85;
+          }
         }
         const path = document.createElementNS(SVGNS, "path");
         path.setAttribute("d",
