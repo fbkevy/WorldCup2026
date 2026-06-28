@@ -252,16 +252,30 @@ def main():
     finishing = games_finishing(state, now)
     baseline = now.hour in BASELINE_HOURS and now.minute < 30
 
-    if not have_key and (forced or finishing or baseline):
+    # Safety net: ANY past-kickoff game still without a winner (e.g. a tick was
+    # missed during its result window). We re-check these at the baseline so no
+    # finished game can be silently left unresolved.
+    pending = []
+    for rnd in state["bracket"].values():
+        for m in rnd:
+            if m.get("teamA") and m.get("teamB") and m.get("winner") is None:
+                ko = parse_iso(m.get("kickoff"))
+                if ko and (now - ko).total_seconds() / 60 >= SCORE_CHECK_MIN:
+                    pending.append(m["id"])
+
+    check_results = bool(finishing) or forced or (baseline and bool(pending))
+
+    if not have_key and (check_results or baseline):
         print("ERROR: ODDS_API_KEY not set", file=sys.stderr)
         sys.exit(1)
 
     changed = False
     newly = []
 
-    # 1) Poll results when a game is finishing (or forced) -> auto-set winners.
-    if have_key and (finishing or forced):
-        print(f"Checking results for {len(finishing)} finishing game(s)"
+    # 1) Poll results -> auto-set winners (uses API `completed` flag, so extra
+    #    time / penalties are handled).
+    if have_key and check_results:
+        print(f"Checking results — finishing:{len(finishing)} pending:{len(pending)}"
               f"{' (forced)' if forced else ''}", file=sys.stderr)
         newly = apply_scores(state, fetch_scores())
         if newly:
@@ -273,7 +287,7 @@ def main():
         fetch_and_apply_odds(state, regions)
         changed = True
 
-    if not (forced or finishing or baseline):
+    if not (check_results or baseline):
         print("Nothing due — no API call.", file=sys.stderr)
 
     # Eliminations + advancement stay consistent (cheap, idempotent).

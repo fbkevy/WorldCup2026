@@ -335,7 +335,7 @@ function championName() {
 // Vertical "Road to the Final": rounds stacked top->bottom, narrowing to the
 // trophy. Mobile-native (scroll down). No SVG connectors here — the funnel
 // shape + owner stripes carry it.
-const FUNNEL_WIDTH = { R32: 100, R16: 90, QF: 80, SF: 70, F: 62 };
+const FUNNEL_WIDTH = { R32: 86, R16: 76, QF: 66, SF: 57, F: 50 };
 
 function renderFunnel() {
   const wrap = $("#bracket");

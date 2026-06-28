@@ -175,7 +175,7 @@ h1 { font-size: 1.15rem; margin: 0; letter-spacing: -0.02em; }
 }
 .as-funnel .fround {
   width: var(--fw, 100%);
-  max-width: 520px;
+  max-width: 440px;
   margin: 0 auto;
 }
 .as-funnel .fround-head {
