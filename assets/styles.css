@@ -103,6 +103,15 @@ h1 { font-size: 1.15rem; margin: 0; letter-spacing: -0.02em; }
   padding: 5px 12px; font: inherit; font-size: 0.8rem; cursor: pointer;
 }
 .view-toggle:hover { border-color: var(--accent); }
+.sel-chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--panel-2); color: var(--text);
+  border: 1px solid var(--line); border-radius: 999px;
+  padding: 5px 11px; font: inherit; font-size: 0.8rem; cursor: pointer;
+}
+.sel-chip[hidden] { display: none; }
+.sel-chip .x { color: var(--muted); font-size: 0.75rem; }
+.sel-chip:hover .x { color: var(--text); }
 .round-nav { display: flex; gap: 6px; flex-wrap: wrap; }
 .round-nav button {
   background: var(--panel); color: var(--muted);
@@ -224,15 +233,15 @@ h1 { font-size: 1.15rem; margin: 0; letter-spacing: -0.02em; }
 .team-full { display: none; }
 .as-funnel .team-full { display: inline; }
 
-/* Next game to be played: highlighted + gently pulsing. */
+/* Next game to be played: white highlight + gentle pulse. */
 .match.next-game {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent), 0 0 18px rgba(47, 129, 247, 0.35);
+  border-color: #ffffff;
+  box-shadow: 0 0 0 1px #ffffff, 0 0 18px rgba(255, 255, 255, 0.3);
   animation: nextpulse 2s ease-in-out infinite;
 }
 @keyframes nextpulse {
-  0%, 100% { box-shadow: 0 0 0 1px var(--accent), 0 0 14px rgba(47, 129, 247, 0.25); }
-  50% { box-shadow: 0 0 0 1px var(--accent), 0 0 22px rgba(47, 129, 247, 0.5); }
+  0%, 100% { box-shadow: 0 0 0 1px #ffffff, 0 0 12px rgba(255, 255, 255, 0.22); }
+  50% { box-shadow: 0 0 0 1px #ffffff, 0 0 22px rgba(255, 255, 255, 0.45); }
 }
 
 .team-row {
@@ -264,6 +273,11 @@ h1 { font-size: 1.15rem; margin: 0; letter-spacing: -0.02em; }
 }
 .team-row.winner .team-prob { color: var(--text); }
 .adv { margin-left: auto; color: var(--accent); font-weight: 700; }
+.team-goals {
+  margin-left: auto; font-variant-numeric: tabular-nums;
+  font-size: 1.05rem; font-weight: 800; color: var(--muted);
+}
+.team-row.winner .team-goals { color: var(--text); }
 .tbd-name { color: var(--muted); font-style: italic; font-weight: 600; }
 
 /* dim teams not owned by the selected player */

@@ -37,14 +37,19 @@ const ABBR = {
 };
 const abbr = (name) => ABBR[name] || (name || "").slice(0, 3).toUpperCase();
 
-// Header line on a match card: kickoff (local TZ) and, once played, the score.
+// Header line on a match card: kickoff in local TZ (✓ once the result is in).
 function matchHeader(m) {
-  if (!m.kickoff && !m.score) return "";
+  if (!m.kickoff) return "";
   const decided = m.winner != null;
-  const parts = [];
-  if (m.kickoff) parts.push((decided ? "✓ " : "") + localKickoff(m.kickoff));
-  if (m.score) parts.push(`<span class="score">${m.score}</span>`);
-  return `<div class="match-time">${parts.join(" · ")}</div>`;
+  return `<div class="match-time">${decided ? "✓ " : ""}${localKickoff(m.kickoff)}</div>`;
+}
+
+// This team's goals, from the stored "a–b" score (teamA–teamB).
+function teamGoals(match, side) {
+  if (!match.score) return null;
+  const parts = match.score.split("–");
+  const g = side === "A" ? parts[0] : parts[1];
+  return g != null ? g.trim() : null;
 }
 
 // Format a UTC ISO kickoff in the viewer's own timezone. Because the source is
@@ -190,9 +195,15 @@ function teamRow(teamName, prob, match, side, full) {
   const cls = decided ? (isWinner ? " winner" : " loser") : "";
   // Show % only when BOTH teams known (head-to-head set) and not yet decided.
   const showProb = match.teamA && match.teamB && !decided;
-  const right = showProb
-    ? `<span class="team-prob">${pct(prob)}</span>`
-    : (decided && isWinner ? `<span class="adv" aria-label="advances">▸</span>` : "");
+  const goals = teamGoals(match, side);
+  let right = "";
+  if (decided && goals != null) {
+    right = `<span class="team-goals">${goals}</span>`;
+  } else if (decided && isWinner) {
+    right = `<span class="adv" aria-label="advances">▸</span>`;
+  } else if (showProb) {
+    right = `<span class="team-prob">${pct(prob)}</span>`;
+  }
   const codeOrName = full
     ? `<span class="team-code">${abbr(teamName)}</span><span class="team-full">${teamName}</span>`
     : `<span class="team-code">${abbr(teamName)}</span>`;
@@ -313,17 +324,22 @@ function nextActiveMatch() {
   return best;
 }
 
-function scrollToNextGame() {
+function markNextGame() {
   $("#bracket").querySelectorAll(".match.next-game")
     .forEach((m) => m.classList.remove("next-game"));
   const n = nextActiveMatch();
-  if (!n) return;
+  if (!n) return null;
   const round = document.getElementById("round-" + n.key);
-  if (!round) return;
+  if (!round) return null;
   const el = round.querySelectorAll(".match")[n.i];
-  if (!el) return;
+  if (!el) return null;
   el.classList.add("next-game");
-  el.scrollIntoView({ block: "center", inline: "center" });
+  return el;
+}
+
+function scrollToNextGame() {
+  const el = markNextGame();
+  if (el) el.scrollIntoView({ block: "center", inline: "center" });
 }
 
 function championName() {
@@ -471,11 +487,26 @@ function drawConnectors() {
 function togglePlayer(id) {
   selectedPlayer = selectedPlayer === id ? null : id;
   document.body.classList.toggle("has-selection", !!selectedPlayer);
+  if (selectedPlayer) $("#standings").classList.remove("open");  // get out of the way (mobile)
+  renderSelChip();
   const sl = $("#bracket").scrollLeft;
   renderStandings();
   renderTree();
   $("#bracket").scrollLeft = sl;                 // keep scroll position
+  markNextGame();                                // keep the highlight after re-render
   if (viewMode === "bracket") requestAnimationFrame(drawConnectors);
+}
+
+function renderSelChip() {
+  const chip = $("#sel-chip");
+  if (selectedPlayer && PLAYER_BY_ID[selectedPlayer]) {
+    const p = PLAYER_BY_ID[selectedPlayer];
+    chip.hidden = false;
+    chip.innerHTML =
+      `<span class="dot" style="background:${p.color}"></span>${p.name}<span class="x">✕</span>`;
+  } else {
+    chip.hidden = true;
+  }
 }
 
 function openTeamSheet(teamName) {
@@ -505,6 +536,9 @@ $("#standings-toggle").addEventListener("click", () =>
   $("#standings").classList.toggle("open"));
 $("#view-toggle").addEventListener("click", () =>
   setView(viewMode === "funnel" ? "bracket" : "funnel"));
+$("#sel-chip").addEventListener("click", () => {
+  if (selectedPlayer) togglePlayer(selectedPlayer);   // clears the filter
+});
 $("#sheet-close").addEventListener("click", () => ($("#sheet").hidden = true));
 $("#sheet").addEventListener("click", (e) => {
   if (e.target.id === "sheet") $("#sheet").hidden = true;
