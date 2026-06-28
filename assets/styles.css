@@ -135,6 +135,11 @@ h1 { font-size: 1.15rem; margin: 0; letter-spacing: -0.02em; }
   box-shadow: var(--shadow);
 }
 .match.tbd { opacity: 0.55; }
+.match-time {
+  padding: 6px 12px; font-size: 0.72rem; color: var(--muted);
+  border-bottom: 1px solid var(--line); background: var(--panel-2);
+  letter-spacing: 0.02em;
+}
 .team-row {
   display: flex; align-items: center; gap: 9px;
   padding: 11px 12px;

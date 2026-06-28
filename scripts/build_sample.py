@@ -95,20 +95,26 @@ def main():
 
     # Mark the first 4 R32 matches as decided (favourite wins) so the skeleton
     # demonstrates eliminations + auto-advance into R16.
+    # Kickoffs stored as canonical UTC (Z); the site converts to each viewer's
+    # local timezone, which fixes cross-date-line wrong-date issues.
+    base = datetime.datetime(2026, 6, 28, 16, 0, tzinfo=datetime.timezone.utc)
+    slots = [16, 19, 22, 25]  # UTC kickoff hours/day (25 == 01:00 next day)
     r32 = []
     for i, (a, b) in enumerate(pairs):
         pa, pb = h2h(a, b)
         winner = "A" if i < 4 else None
+        kickoff = base + datetime.timedelta(days=i // 4, hours=slots[i % 4] - 16)
         r32.append({
             "id": f"r32-{i+1}",
             "teamA": a, "teamB": b,
             "probA": pa, "probB": pb,
             "winner": winner,
+            "kickoff": kickoff.isoformat().replace("+00:00", "Z"),
         })
 
     def empty_round(name, count):
         return [{"id": f"{name}-{i+1}", "teamA": None, "teamB": None,
-                 "probA": None, "probB": None, "winner": None}
+                 "probA": None, "probB": None, "winner": None, "kickoff": None}
                 for i in range(count)]
 
     bracket = {

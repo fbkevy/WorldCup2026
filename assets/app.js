@@ -15,6 +15,19 @@ let selectedPlayer = null;
 const pct = (p) => (p == null ? "" : Math.round(p * 100) + "%");
 const $ = (sel) => document.querySelector(sel);
 
+// Format a UTC ISO kickoff in the viewer's own timezone. Because the source is
+// canonical UTC, the local date is always correct even across the date line.
+const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+function localKickoff(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d)) return "";
+  return d.toLocaleString(undefined, {
+    weekday: "short", day: "numeric", month: "short",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+
 async function load() {
   const res = await fetch("data/state.json?t=" + Date.now());
   STATE = await res.json();
@@ -139,7 +152,12 @@ function renderBracket() {
       const known = m.teamA && m.teamB;
       const div = document.createElement("div");
       div.className = "match" + (known ? "" : " tbd");
+      const decided = m.winner != null;
+      const timeLine = m.kickoff
+        ? `<div class="match-time">${decided ? "✓ " : ""}${localKickoff(m.kickoff)}</div>`
+        : "";
       div.innerHTML =
+        timeLine +
         teamRow(m.teamA, m.probA, m, "A") +
         teamRow(m.teamB, m.probB, m, "B");
       col.appendChild(div);
