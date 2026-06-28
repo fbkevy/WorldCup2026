@@ -95,6 +95,13 @@ h1 { font-size: 1.15rem; margin: 0; letter-spacing: -0.02em; }
   display: flex; align-items: center; justify-content: space-between;
   gap: 12px; padding: 8px 16px 14px; flex-wrap: wrap;
 }
+.head-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.view-toggle {
+  background: var(--panel); color: var(--text);
+  border: 1px solid var(--line); border-radius: 999px;
+  padding: 5px 12px; font: inherit; font-size: 0.8rem; cursor: pointer;
+}
+.view-toggle:hover { border-color: var(--accent); }
 .round-nav { display: flex; gap: 6px; flex-wrap: wrap; }
 .round-nav button {
   background: var(--panel); color: var(--muted);
@@ -157,6 +164,43 @@ h1 { font-size: 1.15rem; margin: 0; letter-spacing: -0.02em; }
   padding: 4px 9px; font-size: 0.68rem; color: var(--muted);
   border-bottom: 1px solid var(--line); background: var(--panel-2);
 }
+
+/* ---------- Funnel view (vertical "Road to the Final") ---------- */
+.bracket.as-funnel {
+  display: block;
+  overflow: visible;
+  scroll-snap-type: none;
+  padding: 0 12px 8px;
+}
+.as-funnel .fround {
+  width: var(--fw, 100%);
+  max-width: 520px;
+  margin: 0 auto;
+}
+.as-funnel .fround-head {
+  display: flex; align-items: center; gap: 10px;
+  margin: 16px 0 9px;
+  color: var(--muted); font-size: 0.72rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.09em;
+  white-space: nowrap;
+}
+.as-funnel .fround-head::before,
+.as-funnel .fround-head::after {
+  content: ""; height: 1px; flex: 1; background: var(--line);
+}
+.as-funnel .fmatches { display: flex; flex-direction: column; gap: 8px; }
+.as-funnel .team-code { display: none; }       /* show full names in the funnel */
+.as-funnel .team-full { font-weight: 600; }
+.as-funnel .team-row { padding: 9px 11px; gap: 9px; }
+.as-funnel .ftrophy {
+  text-align: center; margin: 22px auto 8px; font-size: 1.7rem;
+}
+.as-funnel .champ-name { font-size: 1.1rem; font-weight: 800; margin-top: 4px; }
+.as-funnel .champ-sub { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+
+/* In funnel mode the team code is hidden; ensure full name shows by default */
+.team-full { display: none; }
+.as-funnel .team-full { display: inline; }
 
 /* Next game to be played: highlighted + gently pulsing. */
 .match.next-game {

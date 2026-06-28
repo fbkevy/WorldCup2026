@@ -12,6 +12,9 @@ let STATE = null;
 let PLAYER_BY_ID = {};
 let selectedPlayer = null;
 let collapsedRounds = {};   // round key -> manual collapse override
+// "funnel" (vertical, mobile-native) or "bracket" (horizontal). Default by width.
+let viewMode = (localStorage.getItem("wc-view")) ||
+  (window.innerWidth < 820 ? "funnel" : "bracket");
 
 const pct = (p) => (p == null ? "" : Math.round(p * 100) + "%");
 const $ = (sel) => document.querySelector(sel);
@@ -67,16 +70,44 @@ function aliveCount() {
 
 function render() {
   renderStandings();
-  renderBracket();
+  renderTree();
   $("#updated-at").textContent = new Date(STATE.updatedAt).toLocaleString();
   $("#alive-count").textContent = aliveCount();
   renderSourceBadge();
   renderChampion();
-  // Layout-dependent passes run after the browser lays the bracket out.
+  updateViewToggle();
+  // Layout-dependent passes run after the browser lays the tree out.
   requestAnimationFrame(() => {
-    drawConnectors();
+    if (viewMode === "bracket") drawConnectors();
     scrollToNextGame();
   });
+}
+
+function renderTree() {
+  const wrap = $("#bracket");
+  if (viewMode === "funnel") {
+    wrap.classList.add("as-funnel");
+    renderFunnel();
+  } else {
+    wrap.classList.remove("as-funnel");
+    renderBracket();
+  }
+}
+
+function setView(mode) {
+  viewMode = mode;
+  localStorage.setItem("wc-view", mode);
+  renderTree();
+  updateViewToggle();
+  requestAnimationFrame(() => {
+    if (viewMode === "bracket") drawConnectors();
+    scrollToNextGame();
+  });
+}
+
+function updateViewToggle() {
+  const btn = $("#view-toggle");
+  if (btn) btn.textContent = viewMode === "funnel" ? "⤢ Bracket view" : "⤓ Funnel view";
 }
 
 function renderSourceBadge() {
@@ -135,7 +166,7 @@ function ownerColor(teamName) {
   return owner ? owner.color : "transparent";
 }
 
-function teamRow(teamName, prob, match, side) {
+function teamRow(teamName, prob, match, side, full) {
   if (!teamName) {
     return `<div class="team-row tbd-row"><span class="team-code tbd-name">—</span></div>`;
   }
@@ -150,10 +181,13 @@ function teamRow(teamName, prob, match, side) {
   const right = showProb
     ? `<span class="team-prob">${pct(prob)}</span>`
     : (decided && isWinner ? `<span class="adv" aria-label="advances">▸</span>` : "");
+  const label = full
+    ? `<span class="team-code">${abbr(teamName)}</span><span class="team-full">${teamName}</span>`
+    : `<span class="team-code">${abbr(teamName)}</span>`;
   return `
     <div class="team-row${cls}${sel}" data-owner="${owner || ""}" data-team="${teamName}"
          title="${teamName} · ${ownerTag(teamName)}" style="--owner:${ownerColor(teamName)}">
-      <span class="team-code">${abbr(teamName)}</span>
+      ${label}
       ${right}
     </div>`;
 }
@@ -256,11 +290,83 @@ function scrollToNextGame() {
   const n = nextActiveMatch();
   if (!n) return;
   const round = document.getElementById("round-" + n.key);
+  if (!round) return;
   const el = round.querySelectorAll(".match")[n.i];
   if (!el) return;
   el.classList.add("next-game");
-  el.scrollIntoView({ block: "center", inline: "nearest" });  // vertical
-  scrollRoundIntoView(n.key);                                  // horizontal
+  el.scrollIntoView({ block: "center", inline: "center" });
+}
+
+function championName() {
+  const f = (STATE.bracket.F || [])[0];
+  if (!f) return null;
+  return f.winner === "A" ? f.teamA : f.winner === "B" ? f.teamB : null;
+}
+
+// Vertical "Road to the Final": rounds stacked top->bottom, narrowing to the
+// trophy. Mobile-native (scroll down). No SVG connectors here — the funnel
+// shape + owner stripes carry it.
+const FUNNEL_WIDTH = { R32: 100, R16: 90, QF: 80, SF: 70, F: 62 };
+
+function renderFunnel() {
+  const wrap = $("#bracket");
+  wrap.querySelectorAll(".connectors").forEach((s) => s.remove());
+  wrap.innerHTML = "";
+  const nav = $("#round-nav");
+  nav.innerHTML = "";
+
+  ROUNDS.forEach(([key, label]) => {
+    const matches = STATE.bracket[key] || [];
+    const live = matches.filter((m) => m.teamA && m.teamB).length;
+    const sec = document.createElement("section");
+    sec.className = "fround";
+    sec.id = "round-" + key;
+    sec.dataset.round = key;
+    sec.style.setProperty("--fw", FUNNEL_WIDTH[key] + "%");
+    sec.innerHTML = `<div class="fround-head"><span>${label}${live ? ` · ${live}` : ""}</span></div>`;
+
+    const box = document.createElement("div");
+    box.className = "fmatches";
+    matches.forEach((m) => {
+      const known = m.teamA && m.teamB;
+      const div = document.createElement("div");
+      div.className = "match" + (known ? "" : " tbd");
+      const decided = m.winner != null;
+      const timeLine = m.kickoff
+        ? `<div class="match-time">${decided ? "✓ " : ""}${localKickoff(m.kickoff)}</div>`
+        : "";
+      div.innerHTML =
+        timeLine +
+        teamRow(m.teamA, m.probA, m, "A", true) +
+        teamRow(m.teamB, m.probB, m, "B", true);
+      box.appendChild(div);
+    });
+    sec.appendChild(box);
+    wrap.appendChild(sec);
+
+    const btn = document.createElement("button");
+    btn.textContent = label.replace("Round of ", "R");
+    btn.dataset.round = key;
+    if (key === STATE.currentRound) btn.classList.add("active");
+    btn.addEventListener("click", () =>
+      document.getElementById("round-" + key)
+        .scrollIntoView({ behavior: "smooth", block: "start" }));
+    nav.appendChild(btn);
+  });
+
+  const champ = championName();
+  const owner = champ && PLAYER_BY_ID[STATE.teams[champ]?.owner];
+  const tro = document.createElement("div");
+  tro.className = "ftrophy";
+  tro.innerHTML = champ
+    ? `🏆<div class="champ-name" style="color:${owner ? owner.color : ""}">${champ}</div>
+       <div class="champ-sub">${owner ? owner.name + " wins the draw!" : ""}</div>`
+    : `🏆<div class="champ-sub">Road to the Final</div>`;
+  wrap.appendChild(tro);
+
+  wrap.querySelectorAll(".team-row[data-team]").forEach((row) => {
+    row.addEventListener("click", () => openTeamSheet(row.dataset.team));
+  });
 }
 
 const SVGNS = "http://www.w3.org/2000/svg";
@@ -335,9 +441,9 @@ function togglePlayer(id) {
   document.body.classList.toggle("has-selection", !!selectedPlayer);
   const sl = $("#bracket").scrollLeft;
   renderStandings();
-  renderBracket();
+  renderTree();
   $("#bracket").scrollLeft = sl;                 // keep scroll position
-  requestAnimationFrame(drawConnectors);
+  if (viewMode === "bracket") requestAnimationFrame(drawConnectors);
 }
 
 function openTeamSheet(teamName) {
@@ -365,6 +471,8 @@ function openTeamSheet(teamName) {
 // ---- wiring ----
 $("#standings-toggle").addEventListener("click", () =>
   $("#standings").classList.toggle("open"));
+$("#view-toggle").addEventListener("click", () =>
+  setView(viewMode === "funnel" ? "bracket" : "funnel"));
 $("#sheet-close").addEventListener("click", () => ($("#sheet").hidden = true));
 $("#sheet").addEventListener("click", (e) => {
   if (e.target.id === "sheet") $("#sheet").hidden = true;
