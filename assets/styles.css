@@ -104,14 +104,18 @@ h1 { font-size: 1.15rem; margin: 0; letter-spacing: -0.02em; }
 .round-nav button.active { color: var(--text); border-color: var(--accent); }
 
 .bracket {
-  --gap: 30px;             /* gutter between rounds; connectors live here */
+  --gap: 34px;             /* gutter between rounds; connectors live here */
+  position: relative;
   display: flex;
   gap: var(--gap);
   overflow-x: auto;
-  scroll-snap-type: x proximity;
   padding: 0 16px 8px;
   -webkit-overflow-scrolling: touch;
 }
+.bracket .connectors {
+  position: absolute; left: 0; top: 0; z-index: 0; pointer-events: none;
+}
+.match { z-index: 1; }     /* cards sit above the connector lines */
 .round {
   scroll-snap-align: start;
   flex: 0 0 auto;
@@ -122,10 +126,23 @@ h1 { font-size: 1.15rem; margin: 0; letter-spacing: -0.02em; }
   min-width: clamp(132px, 42vw, 168px);   /* narrow -> 2 rounds fit a phone */
 }
 .round-label {
-  position: sticky; top: 0;
-  color: var(--muted); font-size: 0.72rem; font-weight: 700;
+  position: sticky; top: 0; z-index: 2;
+  display: block; width: 100%; text-align: left;
+  background: none; border: none; cursor: pointer;
+  color: var(--muted); font: inherit; font-size: 0.72rem; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.08em;
-  padding-bottom: 2px;
+  padding: 0 0 2px;
+}
+.round-label:hover { color: var(--text); }
+
+/* Completed rounds collapse to a slim, tappable spine (still scrollable to). */
+.round.collapsed {
+  min-width: 30px; justify-content: flex-start;
+}
+.round.collapsed .match { display: none; }
+.round.collapsed .round-label {
+  writing-mode: vertical-rl; transform: rotate(180deg);
+  text-align: right; padding: 2px 0 0; white-space: nowrap;
 }
 
 .match {
@@ -141,14 +158,16 @@ h1 { font-size: 1.15rem; margin: 0; letter-spacing: -0.02em; }
   border-bottom: 1px solid var(--line); background: var(--panel-2);
 }
 
-/* ---- connector rails (drawn in the gutter between rounds) ---- */
-.round:not(:last-child) .match::after,
-.round:not(:first-child) .match::before {
-  content: ""; position: absolute; top: 50%;
-  width: calc(var(--gap) / 2); height: 2px; background: var(--line);
+/* Next game to be played: highlighted + gently pulsing. */
+.match.next-game {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), 0 0 18px rgba(47, 129, 247, 0.35);
+  animation: nextpulse 2s ease-in-out infinite;
 }
-.round:not(:last-child) .match::after { right: calc(var(--gap) / -2); }
-.round:not(:first-child) .match::before { left: calc(var(--gap) / -2); }
+@keyframes nextpulse {
+  0%, 100% { box-shadow: 0 0 0 1px var(--accent), 0 0 14px rgba(47, 129, 247, 0.25); }
+  50% { box-shadow: 0 0 0 1px var(--accent), 0 0 22px rgba(47, 129, 247, 0.5); }
+}
 
 .team-row {
   display: flex; align-items: center; gap: 8px;

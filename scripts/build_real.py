@@ -36,21 +36,45 @@ def main():
     win = fo.fetch_outrights(regions)          # {team: winProb}
     h2h = fo.fetch_match_h2h(regions)          # {frozenset(pair): {probs, kickoff}}
 
-    # Build R32 from the real fixtures, sorted by kickoff time.
-    events = []
-    for pair, info in h2h.items():
-        a, b = sorted(info["probs"], key=lambda t: -info["probs"][t])  # favourite first
-        events.append((info.get("kickoff") or "", a, b, info["probs"]))
-    events.sort(key=lambda e: e[0])
+    # Official 2026 R32 order so that adjacent-pair advancement (wc_lib.advance)
+    # reproduces the real bracket. Derived from the FIFA match-number tree:
+    # leaf order = matches [74,77,73,75,83,84,81,82,76,78,79,80,86,88,85,87].
+    # Each entry is the pair of (our canonical) team names for that match.
+    OFFICIAL_R32_ORDER = [
+        {"Germany", "Paraguay"},        # 74
+        {"France", "Sweden"},           # 77
+        {"Canada", "South Africa"},     # 73
+        {"Netherlands", "Morocco"},     # 75
+        {"Portugal", "Croatia"},        # 83
+        {"Spain", "Austria"},           # 84
+        {"USA", "Bosnia"},              # 81
+        {"Belgium", "Senegal"},         # 82
+        {"Brazil", "Japan"},            # 76
+        {"Ivory Coast", "Norway"},      # 78
+        {"Mexico", "Ecuador"},          # 79
+        {"England", "DR Congo"},        # 80
+        {"Argentina", "Cape Verde"},    # 86
+        {"Australia", "Egypt"},         # 88
+        {"Switzerland", "Algeria"},     # 85
+        {"Colombia", "Ghana"},          # 87
+    ]
+    by_pair = {frozenset(p): info for p, info in h2h.items()}
 
     r32 = []
     alive = set()
-    for i, (kickoff, a, b, probs) in enumerate(events, start=1):
+    for i, pair in enumerate(OFFICIAL_R32_ORDER, start=1):
+        info = by_pair.get(frozenset(pair))
+        if not info:
+            print(f"WARNING: official pair {pair} not found in API fixtures",
+                  file=sys.stderr)
+            continue
+        probs = info["probs"]
+        a, b = sorted(probs, key=lambda t: -probs[t])  # favourite first
         alive.update([a, b])
         r32.append({
             "id": f"r32-{i}", "teamA": a, "teamB": b,
             "probA": probs[a], "probB": probs[b],
-            "winner": None, "kickoff": kickoff or None,
+            "winner": None, "kickoff": info.get("kickoff") or None,
         })
 
     # Sanity: warn about any R32 team we can't map to an owner.
