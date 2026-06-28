@@ -20,7 +20,7 @@ PLAYERS = [
     ("fran",   "Fran",   "#2f9e44"),
     ("kev",    "Kev",    "#1c7ed6"),
     ("dave",   "Dave",   "#7048e8"),
-    ("dec",    "Dec",    "#0ca678"),
+    ("dec",    "Dec",    "#ffd43b"),
 ]
 
 ALLOCATION = {
