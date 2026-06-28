@@ -39,7 +39,27 @@ function render() {
   renderBracket();
   $("#updated-at").textContent = new Date(STATE.updatedAt).toLocaleString();
   $("#alive-count").textContent = aliveCount();
+  renderSourceBadge();
+  renderChampion();
   scrollToCurrentRound();
+}
+
+function renderSourceBadge() {
+  const badge = $("#source-badge");
+  const live = STATE.source && STATE.source !== "placeholder";
+  badge.textContent = live ? "LIVE ODDS" : "SAMPLE ODDS";
+  badge.className = "badge " + (live ? "live" : "sample");
+}
+
+function renderChampion() {
+  const el = $("#champion");
+  const final = (STATE.bracket.F || [])[0];
+  const champ = final && (final.winner === "A" ? final.teamA : final.winner === "B" ? final.teamB : null);
+  if (!champ) { el.hidden = true; return; }
+  const owner = PLAYER_BY_ID[STATE.teams[champ]?.owner];
+  el.hidden = false;
+  el.innerHTML = `<span class="dot" style="background:${owner ? owner.color : ""}"></span>
+    🏆 Champions: <strong>${champ}</strong>${owner ? ` — ${owner.name} wins the draw!` : ""}`;
 }
 
 function renderStandings() {
@@ -148,8 +168,11 @@ function togglePlayer(id) {
 }
 
 function scrollToCurrentRound() {
+  // Instant (not smooth): smooth + CSS scroll-snap can fight in a loop on some
+  // engines. Scroll the bracket container horizontally to the current round.
   const el = document.getElementById("round-" + STATE.currentRound);
-  if (el) el.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
+  const wrap = $("#bracket");
+  if (el && wrap) wrap.scrollLeft = el.offsetLeft - wrap.offsetLeft;
 }
 
 function openTeamSheet(teamName) {

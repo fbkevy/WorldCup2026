@@ -74,6 +74,20 @@ h1 { font-size: 1.15rem; margin: 0; letter-spacing: -0.02em; }
 .pprob { margin-left: auto; font-variant-numeric: tabular-nums; font-weight: 700; }
 
 .alive-line, .updated-line { color: var(--muted); font-size: 0.8rem; margin: 10px 2px 0; }
+.badge {
+  display: inline-block; padding: 1px 7px; border-radius: 999px;
+  font-size: 0.7rem; font-weight: 700; vertical-align: middle;
+}
+.badge.live { background: rgba(12,166,120,0.18); color: #2ee59d; }
+.badge.sample { background: rgba(245,159,0,0.18); color: #f5b338; }
+
+.champion {
+  margin: 0 16px 14px; padding: 14px 16px; border-radius: var(--radius);
+  background: linear-gradient(90deg, rgba(47,129,247,0.18), rgba(12,166,120,0.14));
+  border: 1px solid var(--line); font-weight: 700; display: flex; gap: 10px; align-items: center;
+}
+.champion[hidden] { display: none; }
+.champion .dot { width: 14px; height: 14px; }
 
 /* ---------- Bracket ---------- */
 .bracket-wrap { padding: 14px 0 40px; }

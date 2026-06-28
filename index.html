@@ -4,6 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>World Cup Draw 2026</title>
+  <meta name="description" content="Our 6-player World Cup 2026 draw — live win probabilities and bracket." />
+  <meta name="theme-color" content="#0d1117" />
+  <!-- Social share preview (WhatsApp / iMessage / etc.) -->
+  <meta property="og:title" content="World Cup Draw 2026" />
+  <meta property="og:description" content="Who's winning our draw? Live odds-based win probabilities + bracket." />
+  <meta property="og:type" content="website" />
+  <link rel="icon" href="data:image/svg+xml,&lt;svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22&gt;&lt;text y=%22.9em%22 font-size=%2290%22&gt;⚽&lt;/text&gt;&lt;/svg&gt;" />
   <link rel="stylesheet" href="assets/styles.css" />
 </head>
 <body>
@@ -17,7 +24,10 @@
     <div id="standings-body" class="standings-body">
       <ol id="standings-list" class="standings-list"></ol>
       <p class="alive-line">Alive teams: <span id="alive-count">–</span>/48</p>
-      <p class="updated-line">Updated <span id="updated-at">–</span></p>
+      <p class="updated-line">
+        <span id="source-badge" class="badge">–</span>
+        Updated <span id="updated-at">–</span>
+      </p>
     </div>
   </aside>
 
@@ -26,6 +36,7 @@
       <h1>World Cup Draw 2026</h1>
       <nav id="round-nav" class="round-nav" aria-label="Jump to round"></nav>
     </header>
+    <div id="champion" class="champion" hidden></div>
     <div id="bracket" class="bracket"></div>
   </main>
 
