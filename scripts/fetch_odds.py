@@ -142,6 +142,18 @@ def main():
             updated += 1
     print(f"Updated winProb for {updated} teams", file=sys.stderr)
 
+    # Diagnostic: flag still-alive teams that got NO odds (likely a name
+    # mismatch -> add them to NAME_MAP). Helps debug the first live run.
+    missing = sorted(t for t, i in state["teams"].items()
+                     if i.get("alive", True) and t not in win)
+    if missing:
+        print("WARNING: no odds matched for alive teams (check NAME_MAP): "
+              + ", ".join(missing), file=sys.stderr)
+    extra = sorted(set(win) - set(state["teams"]))
+    if extra:
+        print("NOTE: API returned teams not in our list: "
+              + ", ".join(extra), file=sys.stderr)
+
     # 2) H2H -> probabilities for bracket matches whose teams are both set
     h2h = fetch_match_h2h(regions)
     matched = 0
