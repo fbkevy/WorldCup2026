@@ -50,9 +50,21 @@ const ABBR = {
 };
 const abbr = (name) => ABBR[name] || (name || "").slice(0, 3).toUpperCase();
 
-// Header line on a match card: kickoff in local TZ (✓ once the result is in).
+// A match is "live" from kickoff until ~135 min later (covers ET) if undecided.
+function isLive(m) {
+  if (!m.kickoff || m.winner != null) return false;
+  const ko = Date.parse(m.kickoff);
+  if (isNaN(ko)) return false;
+  const mins = (Date.now() - ko) / 60000;
+  return mins >= 0 && mins <= 135;
+}
+
+// Header line on a match card: LIVE while in play, kickoff otherwise (✓ once done).
 function matchHeader(m) {
   if (!m.kickoff) return "";
+  if (isLive(m)) {
+    return `<div class="match-time live"><span class="live-dot"></span>LIVE · ${localKickoff(m.kickoff)}</div>`;
+  }
   const decided = m.winner != null;
   return `<div class="match-time">${decided ? "✓ " : ""}${localKickoff(m.kickoff)}</div>`;
 }
@@ -188,6 +200,7 @@ function renderStandings() {
       (selectedPlayer === p.id ? " selected" : "");
     li.innerHTML = `
       <span class="rank">${i + 1}</span>
+      ${rankMove(p, i + 1)}
       <span class="dot" style="background:${p.color}"></span>
       <span class="pname">${p.name}</span>
       <span class="pteams">${aliveTeams}/${p.teams.length}</span>
@@ -198,6 +211,15 @@ function renderStandings() {
 
   const leader = ranked[0];
   $("#standings-peek").textContent = leader ? `${leader.p.name} ${pct(leader.prob)}` : "";
+}
+
+// Stock-exchange ▲/▼ since the last match result (prevRank set by the scraper).
+function rankMove(p, currentRank) {
+  if (p.prevRank == null) return `<span class="rank-move"></span>`;
+  const delta = p.prevRank - currentRank;
+  if (delta > 0) return `<span class="rank-move up" title="up ${delta}">▲${delta}</span>`;
+  if (delta < 0) return `<span class="rank-move down" title="down ${-delta}">▼${-delta}</span>`;
+  return `<span class="rank-move flat">–</span>`;
 }
 
 function ownerTag(teamName) {
@@ -309,7 +331,7 @@ function renderBracket() {
     const btn = document.createElement("button");
     btn.textContent = label.replace("Round of ", "R");
     btn.dataset.round = key;
-    if (key === STATE.currentRound) btn.classList.add("active");
+    if (key === (focusRound || STATE.currentRound)) btn.classList.add("active");
     btn.addEventListener("click", () => navTo(key));
     nav.appendChild(btn);
   });
@@ -384,6 +406,8 @@ function scrollToFocusOrNext() {
 function navTo(key) {
   focusRound = key;
   collapsedRounds[key] = false;
+  document.querySelectorAll("#round-nav button").forEach((b) =>
+    b.classList.toggle("active", b.dataset.round === key));
   const el = document.getElementById("round-" + key);
   if (el) {
     el.classList.remove("fcollapsed", "collapsed");
@@ -459,7 +483,7 @@ function renderFunnel() {
     const btn = document.createElement("button");
     btn.textContent = label.replace("Round of ", "R");
     btn.dataset.round = key;
-    if (key === STATE.currentRound) btn.classList.add("active");
+    if (key === (focusRound || STATE.currentRound)) btn.classList.add("active");
     btn.addEventListener("click", () => navTo(key));
     nav.appendChild(btn);
   });
@@ -682,6 +706,52 @@ window.addEventListener("resize", () => {
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(drawConnectors, 150);
 });
+
+// Live auto-refresh: re-pull state.json periodically and re-render in place (no
+// scroll jump) when the data has actually changed — so scores/standings update
+// during games without a manual reload.
+async function refreshData() {
+  if (document.hidden || !STATE) return;
+  try {
+    const res = await fetch("data/state.json?t=" + Date.now());
+    if (!res.ok) return;
+    const s = await res.json();
+    if (!s.updatedAt || s.updatedAt === STATE.updatedAt) return;
+    STATE = s;
+    PLAYER_BY_ID = Object.fromEntries(s.players.map((p) => [p.id, p]));
+    const sl = $("#bracket").scrollLeft;
+    renderStandings();
+    renderTree();
+    $("#bracket").scrollLeft = sl;
+    $("#updated-at").textContent = new Date(STATE.updatedAt).toLocaleString(undefined, {
+      day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+    });
+    $("#alive-count").textContent = aliveCount();
+    renderSourceBadge();
+    renderChampion();
+    markNextGame();
+    if (viewMode === "bracket") requestAnimationFrame(drawConnectors);
+  } catch (e) { /* offline / transient — ignore */ }
+}
+setInterval(refreshData, 90000);
+
+// Cheap local tick: only re-render when a game starts/ends being LIVE.
+let lastLiveKey = "";
+setInterval(() => {
+  if (document.hidden || !STATE) return;
+  const live = [];
+  ROUND_KEYS.forEach((k) =>
+    (STATE.bracket[k] || []).forEach((m, i) => { if (isLive(m)) live.push(k + i); }));
+  const key = live.join(",");
+  if (key !== lastLiveKey) {
+    lastLiveKey = key;
+    const sl = $("#bracket").scrollLeft;
+    renderTree();
+    $("#bracket").scrollLeft = sl;
+    markNextGame();
+    if (viewMode === "bracket") requestAnimationFrame(drawConnectors);
+  }
+}, 60000);
 
 load().catch((err) => {
   document.getElementById("bracket").innerHTML =

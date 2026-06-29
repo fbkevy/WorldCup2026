@@ -242,9 +242,19 @@ def fetch_and_apply_odds(state, regions):
     print(f"Updated h2h for {matched} live matches", file=sys.stderr)
 
 
+def compute_ranks(state):
+    """Player id -> 1-based rank by combined win prob of alive teams."""
+    sums = {p["id"]: sum(state["teams"][t]["winProb"]
+                         for t in p["teams"] if state["teams"][t].get("alive"))
+            for p in state["players"]}
+    order = sorted(state["players"], key=lambda p: -sums[p["id"]])
+    return {p["id"]: i + 1 for i, p in enumerate(order)}
+
+
 def main():
     state = json.loads(STATE_PATH.read_text(encoding="utf-8"))
     now = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
+    ranks_before = compute_ranks(state)   # snapshot for rank-change arrows
     forced = bool(os.environ.get("FORCE_FETCH")) or "--force" in sys.argv
     have_key = bool(os.environ.get("ODDS_API_KEY"))
     regions = os.environ.get("ODDS_REGIONS", "uk")
@@ -293,6 +303,12 @@ def main():
 
     if not (check_results or baseline):
         print("Nothing due — no API call.", file=sys.stderr)
+
+    # When a result lands, freeze each player's pre-result rank so the site can
+    # show stock-exchange ▲/▼ movement until the next match decides.
+    if newly:
+        for p in state["players"]:
+            p["prevRank"] = ranks_before[p["id"]]
 
     if changed:
         state["source"] = "the-odds-api"
