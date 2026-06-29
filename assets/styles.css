@@ -103,7 +103,12 @@ h1 { font-size: 1.15rem; margin: 0; letter-spacing: -0.02em; }
   display: flex; align-items: center; justify-content: space-between;
   gap: 12px; padding: 8px 16px 14px; flex-wrap: wrap;
 }
-.head-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.head-controls {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  position: sticky; top: var(--ctrl-top, 0px); z-index: 20;
+  background: var(--bg); padding: 8px 16px;
+  border-bottom: 1px solid var(--line);
+}
 .view-seg {
   display: inline-flex; background: var(--panel); border: 1px solid var(--line);
   border-radius: 999px; padding: 2px;
@@ -130,7 +135,8 @@ h1 { font-size: 1.15rem; margin: 0; letter-spacing: -0.02em; }
   padding: 5px 12px; font: inherit; font-size: 0.8rem; cursor: pointer;
 }
 .round-nav button.active {
-  color: #fff; background: var(--accent); border-color: var(--accent);
+  color: #fff; border-color: #fff;
+  animation: nextpulse 2s ease-in-out infinite;   /* same glow as the live game */
 }
 .round-nav button:active { transform: scale(0.95); }
 

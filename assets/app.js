@@ -268,6 +268,7 @@ function teamRow(teamName, prob, match, side, full) {
 }
 
 const ROUND_KEYS = ROUNDS.map((r) => r[0]);
+const NAV_LABEL = { R32: "R32", R16: "R16", QF: "QF", SF: "SF", F: "Final" };
 
 // A round is "completed" once all its known matches have a winner.
 function roundCompleted(key) {
@@ -329,9 +330,9 @@ function renderBracket() {
     wrap.appendChild(col);
 
     const btn = document.createElement("button");
-    btn.textContent = label.replace("Round of ", "R");
+    btn.textContent = NAV_LABEL[key];
     btn.dataset.round = key;
-    if (key === (focusRound || STATE.currentRound)) btn.classList.add("active");
+    if (key === STATE.currentRound) btn.classList.add("active");
     btn.addEventListener("click", () => navTo(key));
     nav.appendChild(btn);
   });
@@ -406,8 +407,6 @@ function scrollToFocusOrNext() {
 function navTo(key) {
   focusRound = key;
   collapsedRounds[key] = false;
-  document.querySelectorAll("#round-nav button").forEach((b) =>
-    b.classList.toggle("active", b.dataset.round === key));
   const el = document.getElementById("round-" + key);
   if (el) {
     el.classList.remove("fcollapsed", "collapsed");
@@ -481,9 +480,9 @@ function renderFunnel() {
     wrap.appendChild(sec);
 
     const btn = document.createElement("button");
-    btn.textContent = label.replace("Round of ", "R");
+    btn.textContent = NAV_LABEL[key];
     btn.dataset.round = key;
-    if (key === (focusRound || STATE.currentRound)) btn.classList.add("active");
+    if (key === STATE.currentRound) btn.classList.add("active");
     btn.addEventListener("click", () => navTo(key));
     nav.appendChild(btn);
   });
@@ -701,10 +700,19 @@ $("#sheet").addEventListener("click", (e) => {
   if (e.target.id === "sheet") $("#sheet").hidden = true;
 });
 
+// Sticky controls sit just below the mobile standings bar; 0 on desktop (the
+// standings is a left sidebar there).
+function setCtrlTop() {
+  const mobile = window.innerWidth < 820;
+  const h = mobile ? ($("#standings-toggle")?.offsetHeight || 46) : 0;
+  document.documentElement.style.setProperty("--ctrl-top", h + "px");
+}
+setCtrlTop();
+
 let resizeTimer;
 window.addEventListener("resize", () => {
   clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(drawConnectors, 150);
+  resizeTimer = setTimeout(() => { setCtrlTop(); drawConnectors(); }, 150);
 });
 
 // Live auto-refresh: re-pull state.json periodically and re-render in place (no

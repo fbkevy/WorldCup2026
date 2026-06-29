@@ -11,7 +11,7 @@
   <meta property="og:description" content="Who's winning our draw? Live odds-based win probabilities + bracket." />
   <meta property="og:type" content="website" />
   <link rel="icon" href="data:image/svg+xml,&lt;svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22&gt;&lt;text y=%22.9em%22 font-size=%2290%22&gt;⚽&lt;/text&gt;&lt;/svg&gt;" />
-  <link rel="stylesheet" href="assets/styles.css?v=8" />
+  <link rel="stylesheet" href="assets/styles.css?v=11" />
 </head>
 <body>
   <!-- Sticky standings: sidebar on desktop, collapsible top bar on phone -->
@@ -34,16 +34,16 @@
   <main class="bracket-wrap">
     <header class="bracket-head">
       <h1>World Cup Draw 2026</h1>
-      <div class="head-controls">
-        <div id="view-seg" class="view-seg" role="tablist">
-          <button data-view="funnel" role="tab">Funnel</button>
-          <button data-view="bracket" role="tab">Bracket</button>
-          <button data-view="fixtures" role="tab">Fixtures</button>
-        </div>
-        <button id="sel-chip" class="sel-chip" hidden></button>
-        <nav id="round-nav" class="round-nav" aria-label="Jump to round"></nav>
-      </div>
     </header>
+    <div class="head-controls">
+      <div id="view-seg" class="view-seg" role="tablist">
+        <button data-view="funnel" role="tab">Funnel</button>
+        <button data-view="bracket" role="tab">Bracket</button>
+        <button data-view="fixtures" role="tab">Fixtures</button>
+      </div>
+      <button id="sel-chip" class="sel-chip" hidden></button>
+      <nav id="round-nav" class="round-nav" aria-label="Jump to round"></nav>
+    </div>
     <div id="champion" class="champion" hidden></div>
     <div id="bracket" class="bracket"></div>
   </main>
@@ -56,6 +56,6 @@
     </div>
   </div>
 
-  <script src="assets/app.js?v=8"></script>
+  <script src="assets/app.js?v=11"></script>
 </body>
 </html>
