@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-06-28T22:56:16+00:00",
+  "updatedAt": "2026-06-29T19:21:49+00:00",
   "source": "the-odds-api",
   "currentRound": "R32",
   "players": [
@@ -97,7 +97,7 @@
   "teams": {
     "Spain": {
       "owner": "paul",
-      "winProb": 0.10843,
+      "winProb": 0.1072,
       "alive": true
     },
     "Ecuador": {
@@ -107,7 +107,7 @@
     },
     "Algeria": {
       "owner": "paul",
-      "winProb": 0.00138,
+      "winProb": 0.00136,
       "alive": true
     },
     "Scotland": {
@@ -122,12 +122,12 @@
     },
     "France": {
       "owner": "caoimh",
-      "winProb": 0.19334,
+      "winProb": 0.19131,
       "alive": true
     },
     "Mexico": {
       "owner": "caoimh",
-      "winProb": 0.01597,
+      "winProb": 0.01643,
       "alive": true
     },
     "Uruguay": {
@@ -137,7 +137,7 @@
     },
     "Paraguay": {
       "owner": "caoimh",
-      "winProb": 0.00204,
+      "winProb": 0.00209,
       "alive": true
     },
     "Iran": {
@@ -152,18 +152,18 @@
     },
     "England": {
       "owner": "fran",
-      "winProb": 0.11213,
+      "winProb": 0.11089,
       "alive": true
     },
     "Norway": {
       "owner": "fran",
-      "winProb": 0.02354,
+      "winProb": 0.02314,
       "alive": true
     },
     "Japan": {
       "owner": "fran",
-      "winProb": 0.01597,
-      "alive": true
+      "winProb": 0.0,
+      "alive": false
     },
     "Türkiye": {
       "owner": "fran",
@@ -172,12 +172,12 @@
     },
     "Canada": {
       "owner": "fran",
-      "winProb": 0.00528,
+      "winProb": 0.00519,
       "alive": true
     },
     "Egypt": {
       "owner": "fran",
-      "winProb": 0.0025,
+      "winProb": 0.00247,
       "alive": true
     },
     "DR Congo": {
@@ -202,27 +202,27 @@
     },
     "Portugal": {
       "owner": "kev",
-      "winProb": 0.06576,
+      "winProb": 0.06485,
       "alive": true
     },
     "Belgium": {
       "owner": "kev",
-      "winProb": 0.01597,
+      "winProb": 0.01643,
       "alive": true
     },
     "Morocco": {
       "owner": "kev",
-      "winProb": 0.01697,
+      "winProb": 0.0176,
       "alive": true
     },
     "USA": {
       "owner": "kev",
-      "winProb": 0.02499,
+      "winProb": 0.02447,
       "alive": true
     },
     "Sweden": {
       "owner": "kev",
-      "winProb": 0.00291,
+      "winProb": 0.00287,
       "alive": true
     },
     "Czechia": {
@@ -232,7 +232,7 @@
     },
     "Ghana": {
       "owner": "kev",
-      "winProb": 0.00178,
+      "winProb": 0.00176,
       "alive": true
     },
     "Cape Verde": {
@@ -252,22 +252,22 @@
     },
     "Argentina": {
       "owner": "dave",
-      "winProb": 0.17135,
+      "winProb": 0.16971,
       "alive": true
     },
     "Germany": {
       "owner": "dave",
-      "winProb": 0.04233,
+      "winProb": 0.04404,
       "alive": true
     },
     "Senegal": {
       "owner": "dave",
-      "winProb": 0.00514,
+      "winProb": 0.00528,
       "alive": true
     },
     "Croatia": {
       "owner": "dave",
-      "winProb": 0.00565,
+      "winProb": 0.00558,
       "alive": true
     },
     "Bosnia": {
@@ -287,27 +287,27 @@
     },
     "Brazil": {
       "owner": "dec",
-      "winProb": 0.06032,
+      "winProb": 0.07948,
       "alive": true
     },
     "Netherlands": {
       "owner": "dec",
-      "winProb": 0.05025,
+      "winProb": 0.05027,
       "alive": true
     },
     "Colombia": {
       "owner": "dec",
-      "winProb": 0.02495,
+      "winProb": 0.02694,
       "alive": true
     },
     "Switzerland": {
       "owner": "dec",
-      "winProb": 0.01093,
+      "winProb": 0.01067,
       "alive": true
     },
     "Austria": {
       "owner": "dec",
-      "winProb": 0.00353,
+      "winProb": 0.00351,
       "alive": true
     },
     "Ivory Coast": {
@@ -317,7 +317,7 @@
     },
     "Australia": {
       "owner": "dec",
-      "winProb": 0.00287,
+      "winProb": 0.00274,
       "alive": true
     },
     "Iraq": {
@@ -342,8 +342,8 @@
         "id": "r32-1",
         "teamA": "Germany",
         "teamB": "Paraguay",
-        "probA": 0.883,
-        "probB": 0.117,
+        "probA": 0.879,
+        "probB": 0.121,
         "winner": null,
         "kickoff": "2026-06-29T20:30:00Z"
       },
@@ -351,8 +351,8 @@
         "id": "r32-2",
         "teamA": "France",
         "teamB": "Sweden",
-        "probA": 0.897,
-        "probB": 0.103,
+        "probA": 0.895,
+        "probB": 0.105,
         "winner": null,
         "kickoff": "2026-06-30T21:00:00Z"
       },
@@ -370,8 +370,8 @@
         "id": "r32-4",
         "teamA": "Netherlands",
         "teamB": "Morocco",
-        "probA": 0.609,
-        "probB": 0.391,
+        "probA": 0.597,
+        "probB": 0.403,
         "winner": null,
         "kickoff": "2026-06-30T01:00:00Z"
       },
@@ -379,8 +379,8 @@
         "id": "r32-5",
         "teamA": "Portugal",
         "teamB": "Croatia",
-        "probA": 0.728,
-        "probB": 0.272,
+        "probA": 0.731,
+        "probB": 0.269,
         "winner": null,
         "kickoff": "2026-07-02T23:00:00Z"
       },
@@ -388,8 +388,8 @@
         "id": "r32-6",
         "teamA": "Spain",
         "teamB": "Austria",
-        "probA": 0.903,
-        "probB": 0.097,
+        "probA": 0.897,
+        "probB": 0.103,
         "winner": null,
         "kickoff": "2026-07-02T19:00:00Z"
       },
@@ -397,8 +397,8 @@
         "id": "r32-7",
         "teamA": "USA",
         "teamB": "Bosnia",
-        "probA": 0.871,
-        "probB": 0.129,
+        "probA": 0.865,
+        "probB": 0.135,
         "winner": null,
         "kickoff": "2026-07-02T00:00:00Z"
       },
@@ -406,8 +406,8 @@
         "id": "r32-8",
         "teamA": "Belgium",
         "teamB": "Senegal",
-        "probA": 0.628,
-        "probB": 0.372,
+        "probA": 0.61,
+        "probB": 0.39,
         "winner": null,
         "kickoff": "2026-07-01T20:00:00Z"
       },
@@ -417,15 +417,16 @@
         "teamB": "Japan",
         "probA": 0.751,
         "probB": 0.249,
-        "winner": null,
-        "kickoff": "2026-06-29T17:00:00Z"
+        "winner": "A",
+        "kickoff": "2026-06-29T17:00:00Z",
+        "score": "2–1"
       },
       {
         "id": "r32-10",
         "teamA": "Norway",
         "teamB": "Ivory Coast",
-        "probA": 0.643,
-        "probB": 0.357,
+        "probA": 0.626,
+        "probB": 0.374,
         "winner": null,
         "kickoff": "2026-06-30T17:00:00Z"
       },
@@ -433,8 +434,8 @@
         "id": "r32-11",
         "teamA": "Mexico",
         "teamB": "Ecuador",
-        "probA": 0.621,
-        "probB": 0.379,
+        "probA": 0.637,
+        "probB": 0.363,
         "winner": null,
         "kickoff": "2026-07-01T01:00:00Z"
       },
@@ -442,8 +443,8 @@
         "id": "r32-12",
         "teamA": "England",
         "teamB": "DR Congo",
-        "probA": 0.911,
-        "probB": 0.089,
+        "probA": 0.912,
+        "probB": 0.088,
         "winner": null,
         "kickoff": "2026-07-01T16:00:00Z"
       },
@@ -451,8 +452,8 @@
         "id": "r32-13",
         "teamA": "Argentina",
         "teamB": "Cape Verde",
-        "probA": 0.944,
-        "probB": 0.056,
+        "probA": 0.937,
+        "probB": 0.063,
         "winner": null,
         "kickoff": "2026-07-03T22:00:00Z"
       },
@@ -460,8 +461,8 @@
         "id": "r32-14",
         "teamA": "Egypt",
         "teamB": "Australia",
-        "probA": 0.572,
-        "probB": 0.428,
+        "probA": 0.573,
+        "probB": 0.427,
         "winner": null,
         "kickoff": "2026-07-03T18:00:00Z"
       },
@@ -469,8 +470,8 @@
         "id": "r32-15",
         "teamA": "Switzerland",
         "teamB": "Algeria",
-        "probA": 0.662,
-        "probB": 0.338,
+        "probA": 0.665,
+        "probB": 0.335,
         "winner": null,
         "kickoff": "2026-07-03T03:00:00Z"
       },
@@ -478,8 +479,8 @@
         "id": "r32-16",
         "teamA": "Colombia",
         "teamB": "Ghana",
-        "probA": 0.818,
-        "probB": 0.182,
+        "probA": 0.829,
+        "probB": 0.171,
         "winner": null,
         "kickoff": "2026-07-04T01:30:00Z"
       }
@@ -523,7 +524,7 @@
       },
       {
         "id": "r16-5",
-        "teamA": null,
+        "teamA": "Brazil",
         "teamB": null,
         "probA": null,
         "probB": null,
