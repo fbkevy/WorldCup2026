@@ -281,6 +281,10 @@ def main():
         if newly:
             changed = True
 
+    # Advance BEFORE fetching odds so any newly-revealed next-round matchups get
+    # their kickoff time + h2h odds in this same run (no one-cycle lag).
+    wc_lib.advance(state)
+
     # 2) Refresh odds at the baseline, when forced, or when a result just landed
     #    (so standings/probabilities reflect the new bracket).
     if have_key and (baseline or forced or newly):
@@ -289,9 +293,6 @@ def main():
 
     if not (check_results or baseline):
         print("Nothing due — no API call.", file=sys.stderr)
-
-    # Eliminations + advancement stay consistent (cheap, idempotent).
-    wc_lib.advance(state)
 
     if changed:
         state["source"] = "the-odds-api"

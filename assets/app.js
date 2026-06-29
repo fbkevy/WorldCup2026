@@ -12,9 +12,22 @@ let STATE = null;
 let PLAYER_BY_ID = {};
 let selectedPlayer = null;
 let collapsedRounds = {};   // round key -> manual collapse override
-// "funnel" (vertical, mobile-native) or "bracket" (horizontal). Default by width.
-let viewMode = (localStorage.getItem("wc-view")) ||
-  (window.innerWidth < 820 ? "funnel" : "bracket");
+let focusRound = null;      // round to scroll to (from a shared link / nav)
+
+// Initial view/player/round come from the URL (shared links) first, then
+// localStorage, then a width default. Keeps shared links reproducible.
+const URL_PARAMS = new URLSearchParams(location.search);
+const VIEWS = ["funnel", "bracket", "fixtures"];
+let viewMode = VIEWS.includes(URL_PARAMS.get("view")) ? URL_PARAMS.get("view")
+  : (localStorage.getItem("wc-view") || (window.innerWidth < 820 ? "funnel" : "bracket"));
+
+function syncURL() {
+  const p = new URLSearchParams();
+  p.set("view", viewMode);
+  if (selectedPlayer) p.set("player", selectedPlayer);
+  if (focusRound) p.set("round", focusRound);
+  history.replaceState(null, "", location.pathname + "?" + p.toString());
+}
 
 const pct = (p) => (p == null ? "" : Math.round(p * 100) + "%");
 const $ = (sel) => document.querySelector(sel);
@@ -68,7 +81,18 @@ async function load() {
   const res = await fetch("data/state.json?t=" + Date.now());
   STATE = await res.json();
   PLAYER_BY_ID = Object.fromEntries(STATE.players.map((p) => [p.id, p]));
+
+  // Apply player + round from a shared link.
+  const pid = URL_PARAMS.get("player");
+  if (pid && PLAYER_BY_ID[pid]) {
+    selectedPlayer = pid;
+    document.body.classList.add("has-selection");
+  }
+  const r = URL_PARAMS.get("round");
+  if (r && ROUND_KEYS.includes(r)) focusRound = r;
+
   render();
+  renderSelChip();
 }
 
 function playerProb(player) {
@@ -96,7 +120,7 @@ function render() {
   // Layout-dependent passes run after the browser lays the tree out.
   requestAnimationFrame(() => {
     if (viewMode === "bracket") drawConnectors();
-    scrollToNextGame();
+    scrollToFocusOrNext();
   });
 }
 
@@ -118,11 +142,12 @@ function renderTree() {
 function setView(mode) {
   viewMode = mode;
   localStorage.setItem("wc-view", mode);
+  syncURL();
   renderTree();
   updateViewSeg();
   requestAnimationFrame(() => {
     if (viewMode === "bracket") drawConnectors();
-    scrollToNextGame();
+    scrollToFocusOrNext();
   });
 }
 
@@ -285,17 +310,7 @@ function renderBracket() {
     btn.textContent = label.replace("Round of ", "R");
     btn.dataset.round = key;
     if (key === STATE.currentRound) btn.classList.add("active");
-    btn.addEventListener("click", () => {
-      collapsedRounds[key] = false;            // expand if it was collapsed
-      document.getElementById("round-" + key).classList.remove("collapsed");
-      requestAnimationFrame(() => {
-        drawConnectors();
-        const round = document.getElementById("round-" + key);
-        const target = round.querySelector(".match.next-game") ||
-                       round.querySelector(".match") || round;
-        target.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
-      });
-    });
+    btn.addEventListener("click", () => navTo(key));
     nav.appendChild(btn);
   });
 
@@ -345,6 +360,38 @@ function markNextGame() {
 function scrollToNextGame() {
   const el = markNextGame();
   if (el) el.scrollIntoView({ block: "center", inline: "center" });
+}
+
+// On (re)render: highlight the next game, then scroll to the shared/nav round
+// if there is one, otherwise to the next game.
+function scrollToFocusOrNext() {
+  const ng = markNextGame();
+  if (focusRound) {
+    const el = document.getElementById("round-" + focusRound);
+    if (el) {
+      collapsedRounds[focusRound] = false;
+      el.classList.remove("fcollapsed", "collapsed");
+      const target = el.querySelector(".match") || el;
+      target.scrollIntoView({ block: viewMode === "funnel" ? "start" : "center", inline: "center" });
+      if (viewMode === "bracket") requestAnimationFrame(drawConnectors);
+      return;
+    }
+  }
+  if (ng) ng.scrollIntoView({ block: "center", inline: "center" });
+}
+
+// Round-nav / shared-link target: focus a round and record it in the URL.
+function navTo(key) {
+  focusRound = key;
+  collapsedRounds[key] = false;
+  const el = document.getElementById("round-" + key);
+  if (el) {
+    el.classList.remove("fcollapsed", "collapsed");
+    const target = el.querySelector(".match.next-game") || el.querySelector(".match") || el;
+    target.scrollIntoView({ behavior: "smooth", block: viewMode === "funnel" ? "start" : "center", inline: "center" });
+    if (viewMode === "bracket") requestAnimationFrame(drawConnectors);
+  }
+  syncURL();
 }
 
 function championName() {
@@ -413,12 +460,7 @@ function renderFunnel() {
     btn.textContent = label.replace("Round of ", "R");
     btn.dataset.round = key;
     if (key === STATE.currentRound) btn.classList.add("active");
-    btn.addEventListener("click", () => {
-      collapsedRounds[key] = false;
-      const el = document.getElementById("round-" + key);
-      el.classList.remove("fcollapsed");
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
+    btn.addEventListener("click", () => navTo(key));
     nav.appendChild(btn);
   });
 
@@ -578,6 +620,7 @@ function togglePlayer(id) {
   selectedPlayer = selectedPlayer === id ? null : id;
   document.body.classList.toggle("has-selection", !!selectedPlayer);
   if (selectedPlayer) $("#standings").classList.remove("open");  // get out of the way (mobile)
+  syncURL();
   renderSelChip();
   const sl = $("#bracket").scrollLeft;
   renderStandings();

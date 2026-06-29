@@ -16,7 +16,7 @@ import wc_lib
 # --- Players, colours, and their teams -------------------------------------
 PLAYERS = [
     ("paul",   "Paul",   "#e6394a"),
-    ("caoimh", "Caoimh", "#f59f00"),
+    ("caoimh", "Caoimh", "#f76707"),
     ("fran",   "Fran",   "#2f9e44"),
     ("kev",    "Kev",    "#1c7ed6"),
     ("dave",   "Dave",   "#7048e8"),
