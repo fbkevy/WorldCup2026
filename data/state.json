@@ -104,242 +104,482 @@
     "Spain": {
       "owner": "paul",
       "winProb": 0.10813,
-      "alive": true
+      "alive": true,
+      "reach": {
+        "R32": 1.0,
+        "R16": 0.883,
+        "QF": 0.64049,
+        "SF": 0.5452,
+        "F": 0.17467,
+        "W": 0.0835
+      }
     },
     "Ecuador": {
       "owner": "paul",
       "winProb": 0.00633,
-      "alive": true
+      "alive": true,
+      "reach": {
+        "R32": 1.0,
+        "R16": 0.353,
+        "QF": 0.04354,
+        "SF": 0.0051,
+        "F": 0.0004,
+        "W": 2e-05
+      }
     },
     "Algeria": {
       "owner": "paul",
       "winProb": 0.00179,
-      "alive": true
+      "alive": true,
+      "reach": {
+        "R32": 1.0,
+        "R16": 0.343,
+        "QF": 0.04583,
+        "SF": 0.00208,
+        "F": 6e-05
+      }
     },
     "Scotland": {
       "owner": "paul",
       "winProb": 0.0,
-      "alive": false
+      "alive": false,
+      "reach": {}
     },
     "Panama": {
       "owner": "paul",
       "winProb": 0.0,
-      "alive": false
+      "alive": false,
+      "reach": {}
     },
     "France": {
       "owner": "caoimh",
       "winProb": 0.29023,
-      "alive": true
+      "alive": true,
+      "reach": {
+        "R32": 1.0,
+        "R16": 0.995,
+        "QF": 0.98472,
+        "SF": 0.90192,
+        "F": 0.71828,
+        "W": 0.50456
+      }
     },
     "Mexico": {
       "owner": "caoimh",
       "winProb": 0.01821,
-      "alive": true
+      "alive": true,
+      "reach": {
+        "R32": 1.0,
+        "R16": 0.647,
+        "QF": 0.13816,
+        "SF": 0.03684,
+        "F": 0.00617,
+        "W": 0.00062
+      }
     },
     "Uruguay": {
       "owner": "caoimh",
       "winProb": 0.0,
-      "alive": false
+      "alive": false,
+      "reach": {}
     },
     "Paraguay": {
       "owner": "caoimh",
       "winProb": 0.00303,
-      "alive": true
+      "alive": true,
+      "reach": {
+        "R32": 1.0,
+        "R16": 1.0,
+        "QF": 0.01338,
+        "SF": 0.00223,
+        "F": 0.00013,
+        "W": 0.0
+      }
     },
     "Iran": {
       "owner": "caoimh",
       "winProb": 0.0,
-      "alive": false
+      "alive": false,
+      "reach": {}
     },
     "Uzbekistan": {
       "owner": "caoimh",
       "winProb": 0.0,
-      "alive": false
+      "alive": false,
+      "reach": {}
     },
     "England": {
       "owner": "fran",
       "winProb": 0.10813,
-      "alive": true
+      "alive": true,
+      "reach": {
+        "R32": 1.0,
+        "R16": 0.912,
+        "QF": 0.80915,
+        "SF": 0.53416,
+        "F": 0.25443,
+        "W": 0.09126
+      }
     },
     "Norway": {
       "owner": "fran",
       "winProb": 0.02485,
-      "alive": true
+      "alive": true,
+      "reach": {
+        "R32": 1.0,
+        "R16": 1.0,
+        "QF": 0.314,
+        "SF": 0.08614,
+        "F": 0.01777,
+        "W": 0.00231
+      }
     },
     "Japan": {
       "owner": "fran",
       "winProb": 0.0,
-      "alive": false
+      "alive": false,
+      "reach": {
+        "R32": 1.0
+      }
     },
     "Türkiye": {
       "owner": "fran",
       "winProb": 0.0,
-      "alive": false
+      "alive": false,
+      "reach": {}
     },
     "Canada": {
       "owner": "fran",
       "winProb": 0.0045,
-      "alive": true
+      "alive": true,
+      "reach": {
+        "R32": 1.0,
+        "R16": 1.0,
+        "QF": 0.275,
+        "SF": 0.0067,
+        "F": 0.00055,
+        "W": 2e-05
+      }
     },
     "Egypt": {
       "owner": "fran",
       "winProb": 0.00258,
-      "alive": true
+      "alive": true,
+      "reach": {
+        "R32": 1.0,
+        "R16": 0.573,
+        "QF": 0.0316,
+        "SF": 0.00514,
+        "F": 0.0002,
+        "W": 0.0
+      }
     },
     "DR Congo": {
       "owner": "fran",
       "winProb": 0.00131,
-      "alive": true
+      "alive": true,
+      "reach": {
+        "R32": 1.0,
+        "R16": 0.088,
+        "QF": 0.00915,
+        "SF": 0.00025,
+        "F": 1e-05
+      }
     },
     "Jordan": {
       "owner": "fran",
       "winProb": 0.0,
-      "alive": false
+      "alive": false,
+      "reach": {}
     },
     "Saudi Arabia": {
       "owner": "fran",
       "winProb": 0.0,
-      "alive": false
+      "alive": false,
+      "reach": {}
     },
     "Haiti": {
       "owner": "fran",
       "winProb": 0.0,
-      "alive": false
+      "alive": false,
+      "reach": {}
     },
     "Portugal": {
       "owner": "kev",
       "winProb": 0.06048,
-      "alive": true
+      "alive": true,
+      "reach": {
+        "R32": 1.0,
+        "R16": 0.736,
+        "QF": 0.31577,
+        "SF": 0.24135,
+        "F": 0.05307,
+        "W": 0.01836
+      }
     },
     "Belgium": {
       "owner": "kev",
       "winProb": 0.01461,
-      "alive": true
+      "alive": true,
+      "reach": {
+        "R32": 1.0,
+        "R16": 0.624,
+        "QF": 0.28107,
+        "SF": 0.04844,
+        "F": 0.00369,
+        "W": 0.00045
+      }
     },
     "Morocco": {
       "owner": "kev",
       "winProb": 0.03594,
-      "alive": true
+      "alive": true,
+      "reach": {
+        "R32": 1.0,
+        "R16": 1.0,
+        "QF": 0.725,
+        "SF": 0.08892,
+        "F": 0.03236,
+        "W": 0.00793
+      }
     },
     "USA": {
       "owner": "kev",
       "winProb": 0.02435,
-      "alive": true
+      "alive": true,
+      "reach": {
+        "R32": 1.0,
+        "R16": 0.861,
+        "QF": 0.59734,
+        "SF": 0.14703,
+        "F": 0.0167,
+        "W": 0.00307
+      }
     },
     "Sweden": {
       "owner": "kev",
       "winProb": 0.00186,
-      "alive": true
+      "alive": true,
+      "reach": {
+        "R32": 1.0,
+        "R16": 0.005,
+        "QF": 0.0019,
+        "SF": 0.00022,
+        "F": 1e-05
+      }
     },
     "Czechia": {
       "owner": "kev",
       "winProb": 0.0,
-      "alive": false
+      "alive": false,
+      "reach": {}
     },
     "Ghana": {
       "owner": "kev",
       "winProb": 0.00184,
-      "alive": true
+      "alive": true,
+      "reach": {
+        "R32": 1.0,
+        "R16": 0.169,
+        "QF": 0.04794,
+        "SF": 0.00222,
+        "F": 6e-05
+      }
     },
     "Cape Verde": {
       "owner": "kev",
       "winProb": 0.00131,
-      "alive": true
+      "alive": true,
+      "reach": {
+        "R32": 1.0,
+        "R16": 0.061,
+        "QF": 0.02202,
+        "SF": 0.00216,
+        "F": 4e-05
+      }
     },
     "Qatar": {
       "owner": "kev",
       "winProb": 0.0,
-      "alive": false
+      "alive": false,
+      "reach": {}
     },
     "Curaçao": {
       "owner": "kev",
       "winProb": 0.0,
-      "alive": false
+      "alive": false,
+      "reach": {}
     },
     "Argentina": {
       "owner": "dave",
       "winProb": 0.16228,
-      "alive": true
+      "alive": true,
+      "reach": {
+        "R32": 1.0,
+        "R16": 0.939,
+        "QF": 0.92565,
+        "SF": 0.82157,
+        "F": 0.54575,
+        "W": 0.24377
+      }
     },
     "Germany": {
       "owner": "dave",
       "winProb": 0.0,
-      "alive": false
+      "alive": false,
+      "reach": {
+        "R32": 1.0
+      }
     },
     "Senegal": {
       "owner": "dave",
       "winProb": 0.00579,
-      "alive": true
+      "alive": true,
+      "reach": {
+        "R32": 1.0,
+        "R16": 0.376,
+        "QF": 0.10481,
+        "SF": 0.00908,
+        "F": 0.00032,
+        "W": 2e-05
+      }
     },
     "Croatia": {
       "owner": "dave",
       "winProb": 0.00454,
-      "alive": true
+      "alive": true,
+      "reach": {
+        "R32": 1.0,
+        "R16": 0.264,
+        "QF": 0.02923,
+        "SF": 0.00642,
+        "F": 0.00018,
+        "W": 1e-05
+      }
     },
     "Bosnia": {
       "owner": "dave",
       "winProb": 0.00131,
-      "alive": true
+      "alive": true,
+      "reach": {
+        "R32": 1.0,
+        "R16": 0.139,
+        "QF": 0.01678,
+        "SF": 0.00043,
+        "F": 0.0
+      }
     },
     "Korea Republic": {
       "owner": "dave",
       "winProb": 0.0,
-      "alive": false
+      "alive": false,
+      "reach": {}
     },
     "Tunisia": {
       "owner": "dave",
       "winProb": 0.0,
-      "alive": false
+      "alive": false,
+      "reach": {}
     },
     "Brazil": {
       "owner": "dec",
       "winProb": 0.0751,
-      "alive": true
+      "alive": true,
+      "reach": {
+        "R32": 1.0,
+        "R16": 1.0,
+        "QF": 0.686,
+        "SF": 0.33751,
+        "F": 0.13423,
+        "W": 0.03858
+      }
     },
     "Netherlands": {
       "owner": "dec",
       "winProb": 0.0,
-      "alive": false
+      "alive": false,
+      "reach": {
+        "R32": 1.0
+      }
     },
     "Colombia": {
       "owner": "dec",
       "winProb": 0.0278,
-      "alive": true
+      "alive": true,
+      "reach": {
+        "R32": 1.0,
+        "R16": 0.831,
+        "QF": 0.67834,
+        "SF": 0.13882,
+        "F": 0.03784,
+        "W": 0.00536
+      }
     },
     "Switzerland": {
       "owner": "dec",
       "winProb": 0.00917,
-      "alive": true
+      "alive": true,
+      "reach": {
+        "R32": 1.0,
+        "R16": 0.657,
+        "QF": 0.2279,
+        "SF": 0.02517,
+        "F": 0.00295,
+        "W": 0.00017
+      }
     },
     "Austria": {
       "owner": "dec",
       "winProb": 0.00253,
-      "alive": true
+      "alive": true,
+      "reach": {
+        "R32": 1.0,
+        "R16": 0.117,
+        "QF": 0.01451,
+        "SF": 0.00204,
+        "F": 4e-05
+      }
     },
     "Ivory Coast": {
       "owner": "dec",
       "winProb": 0.0,
-      "alive": false
+      "alive": false,
+      "reach": {
+        "R32": 1.0
+      }
     },
     "Australia": {
       "owner": "dec",
       "winProb": 0.00202,
-      "alive": true
+      "alive": true,
+      "reach": {
+        "R32": 1.0,
+        "R16": 0.427,
+        "QF": 0.02073,
+        "SF": 0.00283,
+        "F": 9e-05,
+        "W": 0.0
+      }
     },
     "Iraq": {
       "owner": "dec",
       "winProb": 0.0,
-      "alive": false
+      "alive": false,
+      "reach": {}
     },
     "New Zealand": {
       "owner": "dec",
       "winProb": 0.0,
-      "alive": false
+      "alive": false,
+      "reach": {}
     },
     "South Africa": {
       "owner": "dec",
       "winProb": 0.0,
-      "alive": false
+      "alive": false,
+      "reach": {
+        "R32": 1.0
+      }
     }
   },
   "bracket": {
