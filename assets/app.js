@@ -16,7 +16,7 @@ let focusRound = null;      // round to scroll to (from a shared link / nav)
 
 // Must match the ?v= on the script tag in index.html. When a newer version is
 // deployed, open pages auto-reload to pick up new code (see checkForUpdate).
-const APP_VERSION = 20;
+const APP_VERSION = 21;
 
 // Initial view/player/round come from the URL (shared links) first, then
 // localStorage, then a width default. Keeps shared links reproducible.
@@ -563,13 +563,16 @@ function probBar(m) {
     <span style="width:${((1 - pa) * 100).toFixed(1)}%;background:${cb}"></span></div>`;
 }
 
-// Candidate teams that can still reach a future slot, with their projected
-// probability of getting there (teams[t].reach, computed by the bot). Slot k in
-// round R is fed by R32 matches [k*span, (k+1)*span), span = 2^level.
+// Candidate teams for a future slot, weighted by their projected chance of
+// *winning* that match (i.e. advancing out of it). That's their reach into the
+// NEXT round, so the weights sum to 1 across the slot — exactly one team
+// advances. Slot k in round R is fed by R32 matches [k*span, (k+1)*span).
+const NEXT_ROUND = { R32: "R16", R16: "QF", QF: "SF", SF: "F", F: "W" };
 function slotProjection(roundKey, k) {
   const level = ROUND_KEYS.indexOf(roundKey);   // R32=0, R16=1, ...
   if (level <= 0) return [];
   const span = 1 << level;
+  const nextKey = NEXT_ROUND[roundKey];
   const r32 = STATE.bracket["R32"] || [];
   const seen = new Set();
   const cands = [];
@@ -577,7 +580,7 @@ function slotProjection(roundKey, k) {
     for (const t of [r32[i].teamA, r32[i].teamB]) {
       if (!t || seen.has(t)) continue;
       seen.add(t);
-      const w = STATE.teams[t]?.reach?.[roundKey] || 0;
+      const w = STATE.teams[t]?.reach?.[nextKey] || 0;
       if (w > 0) cands.push({ t, w });
     }
   }
@@ -589,13 +592,13 @@ function slotProjection(roundKey, k) {
 function projBar(roundKey, k) {
   const cands = slotProjection(roundKey, k);
   if (cands.length < 2) return "";
-  // Bar widths are normalised so the strip always fills; labels show each
-  // team's true probability of reaching the slot (c.w), which may sum to ~2
-  // across the match's two seats.
+  // Weights are each team's chance of winning this match, so they sum to ~1.
+  // Bar widths are normalised to fill; labels show the true % (top few, so the
+  // shown numbers sum to ≤100 — the omitted long tail makes up the rest).
   const total = cands.reduce((s, c) => s + c.w, 0) || 1;
   const segs = cands.map((c) =>
     `<span style="width:${(c.w / total * 100).toFixed(1)}%;background:${ownerColor(c.t)}"
-       title="${c.t} · ${ownerTag(c.t)} · ${pct(c.w)} to reach"></span>`).join("");
+       title="${c.t} · ${ownerTag(c.t)} · ${pct(c.w)} to advance"></span>`).join("");
   const top = cands.slice(0, 3).map((c) =>
     `<span class="proj-name" data-team="${c.t}"><span class="dot" style="background:${ownerColor(c.t)}"></span>` +
     `${abbr(c.t)} <b>${pct(c.w)}</b></span>`).join("");
@@ -625,7 +628,12 @@ function matchInner(m, key, i, full) {
       probBar(m) + liveGoals(m);
   }
   const pb = projBar(key, i);
-  if (pb) return `<div class="proj-head">Projected</div>${pb}`;
+  if (pb) {
+    // No "Projected" caption (clearly is); show the kickoff time when we have
+    // one (only set once the matchup firms up), otherwise no header.
+    const head = m.kickoff ? `<div class="proj-head">${localKickoff(m.kickoff)}</div>` : "";
+    return head + pb;
+  }
   return teamRow(m.teamA, m.probA, m, "A", full) +
          teamRow(m.teamB, m.probB, m, "B", full);
 }
