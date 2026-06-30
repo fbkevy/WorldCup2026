@@ -86,34 +86,45 @@ def advance(state):
 def compute_reach(state):
     """Per-team probability of reaching each knockout round (projected %s).
 
-    Bottom-up single-elimination DP. For each match we hold a distribution over
-    which team wins it:
+    Bottom-up single-elimination DP. Each match holds a distribution over which
+    team wins it:
       * a decided match collapses to its winner (prob 1);
       * a set matchup uses the real h2h odds (probA/probB);
-      * a future (unset) matchup uses a Bradley-Terry estimate from each team's
-        tournament-winner odds: P(t beats u) = w_t / (w_t + w_u).
-    The winner distribution of a round-(R-1) match is exactly each team's chance
-    of appearing in round R. Result is stored as
-        teams[t]["reach"] = {"R32":1, "R16":.., "QF":.., "SF":.., "F":.., "W":..}
+      * a future (unset) matchup uses a Bradley-Terry estimate from per-team
+        STRENGTH ratings: P(t beats u) = s_t / (s_t + s_u).
+    The winner distribution of a round-(R-1) match is each team's chance of
+    appearing in round R.
+
+    Crucially, the strengths are *calibrated* so the model's champion
+    probabilities reproduce the market's tournament-winner odds. Using the
+    winner odds directly as strength would double-count the bracket (the odds
+    already price in the full run), badly inflating the favourite — e.g. a 29%
+    market favourite coming out at ~50%. We instead fit strengths by iteration
+    so reach["W"] matches winProb, which keeps every round market-consistent.
+
+    Stored as teams[t]["reach"] = {"R32":1,"R16":..,"QF":..,"SF":..,"F":..,"W":..}
     (keys omitted when ~0). Used by the UI to colour future bracket slots.
     """
     bracket = state["bracket"]
     teams = state["teams"]
 
-    def strength(t):
-        info = teams.get(t, {})
-        if not t or not info.get("alive", True):
-            return 0.0
-        return max(float(info.get("winProb") or 0.0), 1e-9)
+    # Market champion target for alive teams, normalised to sum to 1.
+    alive = [t for t, info in teams.items() if info.get("alive", True)]
+    target = {t: max(float(teams[t].get("winProb") or 0.0), 0.0) for t in alive}
+    tot = sum(target.values())
+    target = ({t: v / tot for t, v in target.items()} if tot > 0
+              else {t: 1.0 / len(alive) for t in alive} if alive else {})
+
+    # Strengths to be calibrated (eliminated teams have none).
+    strength = {t: max(target.get(t, 0.0), 1e-9) for t in alive}
 
     def pwin(t, u):
-        st, su = strength(t), strength(u)
+        st, su = strength.get(t, 0.0), strength.get(u, 0.0)
         if st <= 0 and su <= 0:
             return 0.5
         return st / (st + su)
 
     def match_dist(m):
-        """Winner distribution from a match's own two teams."""
         a, b, w = m.get("teamA"), m.get("teamB"), winner_team(m)
         if w:
             return {w: 1.0}
@@ -126,7 +137,6 @@ def compute_reach(state):
         return {a: 1.0} if a else ({b: 1.0} if b else {})
 
     def combine(d1, d2, slot):
-        """Winner distribution of a match whose two sides are distributions."""
         w = winner_team(slot)
         if w:
             return {w: 1.0}
@@ -141,27 +151,50 @@ def compute_reach(state):
             out[u] = pu * sum(pt * pwin(u, t) for t, pt in d1.items())
         return out
 
-    reach = {t: {} for t in teams}
-    dists = {}  # (round, idx) -> winner distribution
+    def run():
+        """One full bracket DP at the current strengths -> (reach, champion)."""
+        reach = {t: {} for t in teams}
+        dists = {}
+        for i, m in enumerate(bracket.get("R32", [])):
+            for t in (m.get("teamA"), m.get("teamB")):
+                if t:
+                    reach[t]["R32"] = 1.0
+            dists[("R32", i)] = match_dist(m)
+        for (cur, _), (nxt, ncount) in zip(ROUND_ORDER, ROUND_ORDER[1:]):
+            nxt_matches = bracket.get(nxt, [])
+            for k in range(ncount):
+                d1 = dists.get((cur, 2 * k), {})
+                d2 = dists.get((cur, 2 * k + 1), {})
+                for t, p in {**d1, **d2}.items():
+                    reach[t][nxt] = p
+                slot = nxt_matches[k] if k < len(nxt_matches) else {}
+                dists[(nxt, k)] = combine(d1, d2, slot)
+        champ = dists.get(("F", 0), {})
+        for t, p in champ.items():
+            reach[t]["W"] = p
+        return reach, champ
 
-    for i, m in enumerate(bracket.get("R32", [])):
-        for t in (m.get("teamA"), m.get("teamB")):
-            if t:
-                reach.setdefault(t, {})["R32"] = 1.0
-        dists[("R32", i)] = match_dist(m)
-
-    for (cur, _), (nxt, ncount) in zip(ROUND_ORDER, ROUND_ORDER[1:]):
-        nxt_matches = bracket.get(nxt, [])
-        for k in range(ncount):
-            d1 = dists.get((cur, 2 * k), {})
-            d2 = dists.get((cur, 2 * k + 1), {})
-            for t, p in {**d1, **d2}.items():
-                reach.setdefault(t, {})[nxt] = p
-            slot = nxt_matches[k] if k < len(nxt_matches) else {}
-            dists[(nxt, k)] = combine(d1, d2, slot)
-
-    for t, p in dists.get(("F", 0), {}).items():
-        reach.setdefault(t, {})["W"] = p
+    # Calibrate: nudge strengths until model champion ~= market champion.
+    # Damped multiplicative update (iterative proportional fitting).
+    reach = {}
+    for _ in range(80):
+        reach, champ = run()
+        err = 0.0
+        for t in alive:
+            c = target.get(t, 0.0)
+            if c <= 0:
+                strength[t] = 1e-12
+                continue
+            m = champ.get(t, 0.0)
+            strength[t] *= (c / m) ** 0.5 if m > 1e-12 else 4.0
+            err = max(err, abs(m - c))
+        s = sum(strength.values())          # rescale (BT is scale-invariant)
+        if s > 0:
+            for t in strength:
+                strength[t] /= s
+        if err < 1e-4:
+            break
+    reach, _ = run()
 
     for t, info in teams.items():
         info["reach"] = {k: round(v, 5) for k, v in reach.get(t, {}).items() if v > 1e-6}
