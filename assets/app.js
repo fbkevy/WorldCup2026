@@ -16,7 +16,7 @@ let focusRound = null;      // round to scroll to (from a shared link / nav)
 
 // Must match the ?v= on the script tag in index.html. When a newer version is
 // deployed, open pages auto-reload to pick up new code (see checkForUpdate).
-const APP_VERSION = 22;
+const APP_VERSION = 23;
 
 // Initial view/player/round come from the URL (shared links) first, then
 // localStorage, then a width default. Keeps shared links reproducible.
@@ -370,7 +370,10 @@ function renderLiveStrip() {   // now a "Now & Next" strip
   const el = $("#live-strip");
   const known = [];
   ROUND_KEYS.forEach((k) => (STATE.bracket[k] || []).forEach((m, i) => {
-    if (m.teamA && m.teamB && m.winner == null) known.push({ m, k, i });
+    // Exclude games the live feed already reports finished, even if the bot
+    // hasn't written the winner yet — otherwise a just-ended game lingers as
+    // "next" until the result lands.
+    if (m.teamA && m.teamB && m.winner == null && !liveFor(m)?.finished) known.push({ m, k, i });
   }));
   known.sort((a, b) => (Date.parse(a.m.kickoff) || Infinity) - (Date.parse(b.m.kickoff) || Infinity));
   const now = known.find((x) => isLive(x.m));
@@ -713,7 +716,7 @@ function nextActiveMatch() {
   let best = null;
   for (const key of ROUND_KEYS) {
     (STATE.bracket[key] || []).forEach((m, i) => {
-      if (m.teamA && m.teamB && m.winner == null) {
+      if (m.teamA && m.teamB && m.winner == null && !liveFor(m)?.finished) {
         const t = m.kickoff ? Date.parse(m.kickoff) : Infinity;
         if (!best || t < best.t) best = { key, i, t };
       }
