@@ -14,6 +14,10 @@ let selectedPlayer = null;
 let collapsedRounds = {};   // round key -> manual collapse override
 let focusRound = null;      // round to scroll to (from a shared link / nav)
 
+// Must match the ?v= on the script tag in index.html. When a newer version is
+// deployed, open pages auto-reload to pick up new code (see checkForUpdate).
+const APP_VERSION = 16;
+
 // Initial view/player/round come from the URL (shared links) first, then
 // localStorage, then a width default. Keeps shared links reproducible.
 const URL_PARAMS = new URLSearchParams(location.search);
@@ -1053,9 +1057,21 @@ async function pollLiveScores() {
   liveTimer = setTimeout(pollLiveScores, hot ? 25000 : 120000);
 }
 
-// Returning to the tab: refresh data + feed so stale LIVE badges clear promptly.
+// Auto-update the CODE too: if a newer version is deployed, reload to pick it
+// up (URL keeps view/player/round). So the page never needs a manual refresh.
+async function checkForUpdate() {
+  try {
+    const html = await (await fetch("index.html?t=" + Date.now(), { cache: "no-store" })).text();
+    const m = html.match(/app\.js\?v=(\d+)/);
+    if (m && parseInt(m[1], 10) > APP_VERSION) location.reload();
+  } catch (e) { /* offline — ignore */ }
+}
+setInterval(checkForUpdate, 150000);   // every 2.5 min
+
+// Returning to the tab: refresh data + feed + check for a new version so stale
+// LIVE badges clear and new code lands promptly.
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden && STATE) { refreshData(); pollLiveScores(); }
+  if (!document.hidden && STATE) { refreshData(); pollLiveScores(); checkForUpdate(); }
 });
 
 load()
