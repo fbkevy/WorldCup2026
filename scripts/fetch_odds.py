@@ -37,10 +37,12 @@ BASE = "https://api.the-odds-api.com/v4"
 # extra time / penalties via the API's `completed` flag) and at a 3x/day odds
 # baseline. Outside those windows the tick exits without any API call.
 BASELINE_HOURS = (7, 13, 19)          # UTC hours for the 3x/day odds refresh
-SCORE_CHECK_MIN = 110                 # start polling a game's result this many
-                                      # minutes after kickoff (~ full time)
-SCORE_CHECK_MAX = 260                 # stop polling after this (covers ET + pens
-                                      # + result-reporting lag), then needs manual
+SCORE_CHECK_MIN = 95                  # start polling a game's result this many
+                                      # minutes after kickoff (regular full time);
+                                      # keeps polling every run until resolved, so
+                                      # both normal-time and penalty finishes catch.
+SCORE_CHECK_MAX = 300                 # stop polling after this (ET + pens + lag)
+ODDS_THROTTLE_MIN = 15                # min minutes between live odds refreshes
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 STATE_PATH = ROOT / "data" / "state.json"
 
@@ -346,9 +348,13 @@ def main():
     wc_lib.advance(state)
 
     # 2) Refresh odds: at the baseline, when forced, when a result just landed,
-    #    OR while any game is in play (live, mid-match odds movement).
-    if have_key and (baseline or forced or newly or inplay):
+    #    OR while a game is in play (live odds) — but throttled so frequent
+    #    result-polling doesn't burn credits on odds every few minutes.
+    last_odds = parse_iso(state.get("oddsCheckedAt"))
+    odds_due = last_odds is None or (now - last_odds).total_seconds() / 60 >= ODDS_THROTTLE_MIN
+    if have_key and (baseline or forced or newly or (inplay and odds_due)):
         fetch_and_apply_odds(state, regions)
+        state["oddsCheckedAt"] = now.isoformat()
         changed = True
 
     if not (check_results or baseline or inplay):

@@ -1,25 +1,28 @@
 name: Update odds
 
+# Reliability note: GitHub throttles scheduled crons hard (a "*/10" job often
+# only fires every 1-2 hours). So instead of relying on the schedule, each run
+# LOOPS internally every 5 min for ~55 min, then re-arms the next run via
+# workflow_dispatch (which GitHub honours immediately). The hourly schedule is
+# just a backstop to restart the chain if it ever breaks.
+
 on:
   schedule:
-    # Tick every 10 min. GitHub heavily throttles frequent scheduled crons, so
-    # in practice this fires irregularly (sometimes hours apart) — that's fine:
-    # the script catches up ALL unresolved games on whatever run does fire.
-    # API credits are plentiful (well under the 500/mo cap), so we check often.
-    - cron: "*/10 * * * *"
-  workflow_dispatch: {}   # manual run (forces a fetch regardless of schedule)
+    - cron: "7 * * * *"     # hourly backstop
+  workflow_dispatch: {}
 
 permissions:
   contents: write
+  actions: write           # needed to re-arm the next run
 
-# Never run two updates at once (avoids push races); let the running one finish.
 concurrency:
-  group: update-odds
+  group: update-odds       # at most one running + one pending; no pile-ups
   cancel-in-progress: false
 
 jobs:
   update:
     runs-on: ubuntu-latest
+    timeout-minutes: 58
     steps:
       - uses: actions/checkout@v4
 
@@ -27,24 +30,27 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Fetch odds and update state.json
+      - name: Re-arm the next run
+        # Dispatch up front so the chain continues even if this run later fails.
+        # Concurrency queues it to start right after this ~55-min loop ends.
+        run: gh workflow run "Update odds" --repo "$GITHUB_REPOSITORY" || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Poll results + odds (every 5 min for ~55 min)
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
-          # Manual runs force a fetch; scheduled ticks let the script decide.
-          FORCE_FETCH: ${{ github.event_name == 'workflow_dispatch' && '1' || '' }}
-        run: python scripts/fetch_odds.py
-
-      - name: Commit if changed
         run: |
           git config user.name "odds-bot"
           git config user.email "odds-bot@users.noreply.github.com"
-          if ! git diff --quiet -- data/; then
-            git add data/state.json data/history.json
-            git commit -m "Update odds ($(date -u '+%Y-%m-%d %H:%M UTC'))"
-            # Rebase on any changes pushed meanwhile (e.g. manual edits) so the
-            # push can't fail on a moved remote.
-            git pull --rebase --autostash origin main || true
-            git push
-          else
-            echo "No odds change."
-          fi
+          for i in $(seq 1 11); do
+            echo "--- iteration $i ($(date -u '+%H:%M UTC')) ---"
+            python scripts/fetch_odds.py || true
+            if ! git diff --quiet -- data/; then
+              git add data/state.json data/history.json
+              git commit -m "Update odds ($(date -u '+%Y-%m-%d %H:%M UTC'))"
+              git pull --rebase --autostash origin main || true
+              git push || true
+            fi
+            if [ "$i" -lt 11 ]; then sleep 300; fi
+          done

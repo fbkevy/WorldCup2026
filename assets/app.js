@@ -896,7 +896,21 @@ async function refreshData() {
     if (viewMode === "bracket") requestAnimationFrame(drawConnectors);
   } catch (e) { /* offline / transient — ignore */ }
 }
-setInterval(refreshData, 90000);
+
+// Poll faster while any game is around match time (result may land), slower when
+// nothing's on.
+function pollDelay() {
+  const hot = STATE && ROUND_KEYS.some((k) =>
+    (STATE.bracket[k] || []).some((m) => {
+      if (!m.kickoff || m.winner != null) return false;
+      const age = (Date.now() - Date.parse(m.kickoff)) / 60000;
+      return age >= -15 && age <= 300;   // from just before KO to well after
+    }));
+  return hot ? 30000 : 90000;
+}
+(function scheduleRefresh() {
+  setTimeout(async () => { await refreshData(); scheduleRefresh(); }, pollDelay());
+})();
 
 // Cheap local tick: only re-render when a game starts/ends being LIVE.
 let lastLiveKey = "";
