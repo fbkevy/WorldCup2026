@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-06-30T21:18:16+00:00",
+  "updatedAt": "2026-06-30T21:33:17+00:00",
   "source": "the-odds-api",
   "currentRound": "R32",
   "players": [
@@ -103,17 +103,17 @@
   "teams": {
     "Spain": {
       "owner": "paul",
-      "winProb": 0.11271,
+      "winProb": 0.1146,
       "alive": true
     },
     "Ecuador": {
       "owner": "paul",
-      "winProb": 0.00659,
+      "winProb": 0.00662,
       "alive": true
     },
     "Algeria": {
       "owner": "paul",
-      "winProb": 0.00181,
+      "winProb": 0.00182,
       "alive": true
     },
     "Scotland": {
@@ -128,12 +128,12 @@
     },
     "France": {
       "owner": "caoimh",
-      "winProb": 0.25177,
+      "winProb": 0.24621,
       "alive": true
     },
     "Mexico": {
       "owner": "caoimh",
-      "winProb": 0.02,
+      "winProb": 0.02254,
       "alive": true
     },
     "Uruguay": {
@@ -143,7 +143,7 @@
     },
     "Paraguay": {
       "owner": "caoimh",
-      "winProb": 0.00338,
+      "winProb": 0.00339,
       "alive": true
     },
     "Iran": {
@@ -158,12 +158,12 @@
     },
     "England": {
       "owner": "fran",
-      "winProb": 0.11021,
+      "winProb": 0.11071,
       "alive": true
     },
     "Norway": {
       "owner": "fran",
-      "winProb": 0.02669,
+      "winProb": 0.0268,
       "alive": true
     },
     "Japan": {
@@ -178,12 +178,12 @@
     },
     "Canada": {
       "owner": "fran",
-      "winProb": 0.00482,
+      "winProb": 0.00484,
       "alive": true
     },
     "Egypt": {
       "owner": "fran",
-      "winProb": 0.00263,
+      "winProb": 0.00264,
       "alive": true
     },
     "DR Congo": {
@@ -208,27 +208,27 @@
     },
     "Portugal": {
       "owner": "kev",
-      "winProb": 0.06378,
+      "winProb": 0.06407,
       "alive": true
     },
     "Belgium": {
       "owner": "kev",
-      "winProb": 0.01521,
+      "winProb": 0.01528,
       "alive": true
     },
     "Morocco": {
       "owner": "kev",
-      "winProb": 0.03951,
+      "winProb": 0.0397,
       "alive": true
     },
     "USA": {
       "owner": "kev",
-      "winProb": 0.02519,
+      "winProb": 0.02531,
       "alive": true
     },
     "Sweden": {
       "owner": "kev",
-      "winProb": 0.00431,
+      "winProb": 0.00433,
       "alive": true
     },
     "Czechia": {
@@ -243,7 +243,7 @@
     },
     "Cape Verde": {
       "owner": "kev",
-      "winProb": 0.00133,
+      "winProb": 0.00134,
       "alive": true
     },
     "Qatar": {
@@ -258,7 +258,7 @@
     },
     "Argentina": {
       "owner": "dave",
-      "winProb": 0.17599,
+      "winProb": 0.17514,
       "alive": true
     },
     "Germany": {
@@ -268,12 +268,12 @@
     },
     "Senegal": {
       "owner": "dave",
-      "winProb": 0.00603,
+      "winProb": 0.00606,
       "alive": true
     },
     "Croatia": {
       "owner": "dave",
-      "winProb": 0.00466,
+      "winProb": 0.00468,
       "alive": true
     },
     "Bosnia": {
@@ -293,7 +293,7 @@
     },
     "Brazil": {
       "owner": "dec",
-      "winProb": 0.07571,
+      "winProb": 0.07606,
       "alive": true
     },
     "Netherlands": {
@@ -303,17 +303,17 @@
     },
     "Colombia": {
       "owner": "dec",
-      "winProb": 0.02883,
+      "winProb": 0.02896,
       "alive": true
     },
     "Switzerland": {
       "owner": "dec",
-      "winProb": 0.00962,
+      "winProb": 0.00966,
       "alive": true
     },
     "Austria": {
       "owner": "dec",
-      "winProb": 0.0026,
+      "winProb": 0.00261,
       "alive": true
     },
     "Ivory Coast": {
@@ -358,8 +358,8 @@
         "id": "r32-2",
         "teamA": "France",
         "teamB": "Sweden",
-        "probA": 0.875,
-        "probB": 0.125,
+        "probA": 0.871,
+        "probB": 0.129,
         "winner": null,
         "kickoff": "2026-06-30T21:00:00Z"
       },
@@ -414,8 +414,8 @@
         "id": "r32-8",
         "teamA": "Belgium",
         "teamB": "Senegal",
-        "probA": 0.62,
-        "probB": 0.38,
+        "probA": 0.621,
+        "probB": 0.379,
         "winner": null,
         "kickoff": "2026-07-01T20:00:00Z"
       },
@@ -443,8 +443,8 @@
         "id": "r32-11",
         "teamA": "Mexico",
         "teamB": "Ecuador",
-        "probA": 0.647,
-        "probB": 0.353,
+        "probA": 0.648,
+        "probB": 0.352,
         "winner": null,
         "kickoff": "2026-07-01T01:00:00Z"
       },
@@ -641,5 +641,5 @@
   "postFetched": [
     "r32-3"
   ],
-  "oddsCheckedAt": "2026-06-30T21:18:16+00:00"
+  "oddsCheckedAt": "2026-06-30T21:33:17+00:00"
 }
