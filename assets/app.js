@@ -50,21 +50,71 @@ const ABBR = {
 };
 const abbr = (name) => ABBR[name] || (name || "").slice(0, 3).toUpperCase();
 
-// A match is "live" from kickoff until ~135 min later (covers ET) if undecided.
+// ---- Live scores from a free, no-key, CORS-open source (worldcup26.ir) ----
+// Real-time in-match scores + minute, polled client-side. Final results still
+// come from the reliable Odds API bot; this is a best-effort live overlay.
+const LIVE_NAME_MAP = {
+  "Bosnia and Herzegovina": "Bosnia", "Czech Republic": "Czechia",
+  "Democratic Republic of the Congo": "DR Congo", "South Korea": "Korea Republic",
+  "Turkey": "Türkiye", "United States": "USA",
+};
+const liveCanon = (n) => LIVE_NAME_MAP[n] || n;
+let LIVE_SCORES = {};   // "TeamA|TeamB" (sorted) -> {h,a,hs,as,minute,finished}
+
+async function fetchLiveScores() {
+  try {
+    const res = await fetch("https://worldcup26.ir/get/games", { cache: "no-store" });
+    if (!res.ok) return;
+    const data = await res.json();
+    const map = {};
+    for (const g of (data.games || [])) {
+      const h = liveCanon(g.home_team_name_en), a = liveCanon(g.away_team_name_en);
+      if (!h || !a) continue;
+      const te = String(g.time_elapsed || "").toLowerCase();
+      const finished = te === "finished" || String(g.finished).toUpperCase() === "TRUE";
+      const notstarted = te === "notstarted" || te === "";
+      map[[h, a].sort().join("|")] = {
+        h, a, hs: g.home_score, as: g.away_score,
+        minute: (!finished && !notstarted) ? g.time_elapsed : null, finished,
+      };
+    }
+    LIVE_SCORES = map;
+  } catch (e) { /* source down — fall back to time-based live */ }
+}
+
+// Live info for one of our matches, oriented to teamA/teamB.
+function liveFor(m) {
+  if (!m.teamA || !m.teamB) return null;
+  const e = LIVE_SCORES[[m.teamA, m.teamB].sort().join("|")];
+  if (!e) return null;
+  const aScore = m.teamA === e.h ? e.hs : e.as;
+  const bScore = m.teamB === e.h ? e.hs : e.as;
+  return { minute: e.minute, finished: e.finished, aScore, bScore };
+}
+
+// A match is "live" if the feed says it's in play, or (fallback) within the
+// kickoff window and not yet resolved.
 function isLive(m) {
-  if (!m.kickoff || m.winner != null) return false;
-  const ko = Date.parse(m.kickoff);
-  if (isNaN(ko)) return false;
-  const mins = (Date.now() - ko) / 60000;
+  if (m.winner != null) return false;
+  const ls = liveFor(m);
+  if (ls) {
+    if (ls.finished) return false;
+    if (ls.minute != null) return true;
+  }
+  if (!m.kickoff) return false;
+  const mins = (Date.now() - Date.parse(m.kickoff)) / 60000;
   return mins >= 0 && mins <= 135;
 }
 
-// Header line on a match card: LIVE while in play, kickoff otherwise (✓ once done).
+// Header line on a match card: live score+minute while in play, kickoff otherwise.
 function matchHeader(m) {
-  if (!m.kickoff) return "";
   if (isLive(m)) {
-    return `<div class="match-time live"><span class="live-dot"></span>LIVE · ${localKickoff(m.kickoff)}</div>`;
+    const ls = liveFor(m);
+    const sc = ls && ls.aScore != null ? ` ${ls.aScore}–${ls.bScore}` : "";
+    const min = ls && ls.minute ? ` ${ls.minute}'` : "";
+    return `<div class="match-time live"><span class="live-dot"></span>LIVE${min}${sc}</div>`;
   }
+  if (!m.kickoff) return "";
   const decided = m.winner != null;
   return `<div class="match-time">${decided ? "✓ " : ""}${localKickoff(m.kickoff)}</div>`;
 }
@@ -211,16 +261,58 @@ function toast(msg) {
 }
 
 // ---- Live-now strip (#5) ----
-function renderLiveStrip() {
+// "Now & Next": the live game (prominent, with live score) + the next upcoming
+// game (compact). Tap either to scroll the bracket to it.
+function nnCard(x, kind) {
+  const { m, k, i } = x;
+  const live = isLive(m);
+  const ls = liveFor(m);
+  const label = kind === "now"
+    ? (live ? `<span class="live-dot"></span>LIVE${ls && ls.minute ? ` ${ls.minute}'` : ""}` : "NOW")
+    : `NEXT · ${localKickoff(m.kickoff)}`;
+  const side = (t, s) => {
+    let val = "";
+    if (live && ls && ls.aScore != null) val = s === "A" ? ls.aScore : ls.bScore;
+    else if (kind === "next") val = pct(s === "A" ? m.probA : m.probB);
+    return `<div class="nn-team"><span class="dot" style="background:${ownerColor(t)}"></span>` +
+      `<span class="nn-code">${abbr(t)}</span><span class="nn-own">${ownerTag(t)}</span>` +
+      `<span class="nn-score">${val}</span></div>`;
+  };
+  return `<button class="nn-card ${kind}${live ? " live" : ""}" data-round="${k}" data-mi="${i}">` +
+    `<div class="nn-label">${label}</div>${side(m.teamA, "A")}${side(m.teamB, "B")}</button>`;
+}
+
+function renderLiveStrip() {   // now a "Now & Next" strip
   const el = $("#live-strip");
-  const live = [];
-  ROUND_KEYS.forEach((k) => (STATE.bracket[k] || []).forEach((m) => { if (isLive(m)) live.push(m); }));
-  if (!live.length) { el.hidden = true; el.innerHTML = ""; return; }
+  const known = [];
+  ROUND_KEYS.forEach((k) => (STATE.bracket[k] || []).forEach((m, i) => {
+    if (m.teamA && m.teamB && m.winner == null) known.push({ m, k, i });
+  }));
+  known.sort((a, b) => (Date.parse(a.m.kickoff) || Infinity) - (Date.parse(b.m.kickoff) || Infinity));
+  const now = known.find((x) => isLive(x.m));
+  const next = known.find((x) => x !== now);
+  if (!now && !next) { el.hidden = true; el.innerHTML = ""; return; }
   el.hidden = false;
-  el.innerHTML = `<span class="live-dot"></span>` + live.map((m) =>
-    `<span class="ls-game">${abbr(m.teamA)}${m.score ? " " + m.score.split("–")[0] : ""}` +
-    `<span class="ls-v">v</span>${abbr(m.teamB)}${m.score ? " " + m.score.split("–")[1] : ""}</span>`
-  ).join("");
+  el.innerHTML = (now ? nnCard(now, "now") : "") + (next ? nnCard(next, "next") : "");
+  el.querySelectorAll(".nn-card").forEach((c) =>
+    c.addEventListener("click", () => scrollToMatch(c.dataset.round, +c.dataset.mi)));
+}
+
+// Scroll the bracket/funnel to a specific match and flash it.
+function scrollToMatch(round, mi) {
+  focusRound = round;
+  collapsedRounds[round] = false;
+  renderTree();
+  syncURL();
+  requestAnimationFrame(() => {
+    if (viewMode === "bracket") drawConnectors();
+    const t = $("#bracket").querySelector(`.match[data-round="${round}"][data-mi="${mi}"]`);
+    if (t) {
+      t.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+      t.classList.add("flash");
+      setTimeout(() => t.classList.remove("flash"), 1200);
+    }
+  });
 }
 
 // ---- Highlights ticker: biggest riser + latest upset (#3) ----
@@ -931,7 +1023,44 @@ setInterval(() => {
   }
 }, 60000);
 
-load().catch((err) => {
-  document.getElementById("bracket").innerHTML =
-    `<p style="color:#f66;padding:16px">Could not load data: ${err.message}</p>`;
+// Live scores from the free feed: poll every ~25s while a game is on (fast,
+// real-time), re-render in place when the score/minute changes.
+let lastLiveSig = "";
+let liveTimer = null;
+function liveHot() {
+  return STATE && ROUND_KEYS.some((k) => (STATE.bracket[k] || []).some((m) => {
+    if (!m.kickoff || m.winner != null) return false;
+    const age = (Date.now() - Date.parse(m.kickoff)) / 60000;
+    return age >= -10 && age <= 200;
+  }));
+}
+async function pollLiveScores() {
+  clearTimeout(liveTimer);   // single chain even if called from multiple places
+  const hot = liveHot();
+  if (!document.hidden) {
+    await fetchLiveScores();
+    const sig = JSON.stringify(LIVE_SCORES);
+    if (sig !== lastLiveSig && STATE) {
+      lastLiveSig = sig;
+      const sl = $("#bracket").scrollLeft;
+      renderTree();
+      $("#bracket").scrollLeft = sl;
+      renderLiveStrip();
+      markNextGame();
+      if (viewMode === "bracket") requestAnimationFrame(drawConnectors);
+    }
+  }
+  liveTimer = setTimeout(pollLiveScores, hot ? 25000 : 120000);
+}
+
+// Returning to the tab: refresh data + feed so stale LIVE badges clear promptly.
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && STATE) { refreshData(); pollLiveScores(); }
 });
+
+load()
+  .then(() => { fetchLiveScores().then(() => { renderLiveStrip(); markNextGame(); }); pollLiveScores(); })
+  .catch((err) => {
+    document.getElementById("bracket").innerHTML =
+      `<p style="color:#f66;padding:16px">Could not load data: ${err.message}</p>`;
+  });

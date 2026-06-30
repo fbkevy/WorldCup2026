@@ -386,15 +386,41 @@ body.has-selection .team-row.loser { opacity: 0.2; }
 }
 .share-btn:hover { border-color: var(--accent); }
 
+/* Now & Next strip */
 .live-strip {
-  display: flex; align-items: center; gap: 10px; overflow-x: auto;
-  padding: 7px 16px; background: rgba(255, 82, 82, 0.1);
-  border-bottom: 1px solid var(--line);
-  font-size: 0.82rem; font-weight: 700; color: #ff8787;
+  display: flex; align-items: stretch; gap: 10px;
+  padding: 10px 16px; border-bottom: 1px solid var(--line);
 }
 .live-strip[hidden] { display: none; }
-.ls-game { white-space: nowrap; }
-.ls-v { color: var(--muted); margin: 0 5px; font-weight: 400; }
+.nn-card {
+  flex: 1 1 0; min-width: 0; text-align: left; cursor: pointer;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+  padding: 8px 11px; color: var(--text); font: inherit;
+  animation: nnIn 0.35s ease both;
+}
+.nn-card.now { flex: 1.8 1 0; }                 /* current game gets more room */
+.nn-card.next { opacity: 0.82; }                /* next partially de-emphasised */
+.nn-card.live { border-color: #ff5252; box-shadow: 0 0 14px rgba(255, 82, 82, 0.18); }
+.nn-card.next { animation-delay: 0.08s; }
+@keyframes nnIn { from { opacity: 0; transform: translateY(-6px) scale(0.98); } }
+.nn-label {
+  font-size: 0.66rem; font-weight: 800; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 5px;
+  display: flex; align-items: center; gap: 5px;
+}
+.nn-card.live .nn-label { color: #ff8787; }
+.nn-team { display: flex; align-items: center; gap: 7px; padding: 2px 0; }
+.nn-code { font-weight: 800; font-size: 0.9rem; letter-spacing: 0.03em; }
+.nn-own { color: var(--muted); font-size: 0.7rem; }
+.nn-score { margin-left: auto; font-weight: 800; font-variant-numeric: tabular-nums; }
+.nn-card.next .nn-score { color: var(--muted); font-weight: 700; font-size: 0.8rem; }
+
+/* Brief highlight when you tap Now/Next to jump to a match. */
+.match.flash { animation: matchflash 1.2s ease; }
+@keyframes matchflash {
+  0%, 100% { box-shadow: none; }
+  30% { box-shadow: 0 0 0 2px #fff, 0 0 22px rgba(255, 255, 255, 0.5); }
+}
 
 .highlights { display: flex; gap: 8px; padding: 8px 16px; overflow-x: auto; }
 .highlights[hidden] { display: none; }
