@@ -16,7 +16,7 @@ let focusRound = null;      // round to scroll to (from a shared link / nav)
 
 // Must match the ?v= on the script tag in index.html. When a newer version is
 // deployed, open pages auto-reload to pick up new code (see checkForUpdate).
-const APP_VERSION = 18;
+const APP_VERSION = 19;
 
 // Initial view/player/round come from the URL (shared links) first, then
 // localStorage, then a width default. Keeps shared links reproducible.
@@ -522,6 +522,60 @@ function probBar(m) {
     <span style="width:${((1 - pa) * 100).toFixed(1)}%;background:${cb}"></span></div>`;
 }
 
+// Candidate teams that can still reach a future slot, with their projected
+// probability of getting there (teams[t].reach, computed by the bot). Slot k in
+// round R is fed by R32 matches [k*span, (k+1)*span), span = 2^level.
+function slotProjection(roundKey, k) {
+  const level = ROUND_KEYS.indexOf(roundKey);   // R32=0, R16=1, ...
+  if (level <= 0) return [];
+  const span = 1 << level;
+  const r32 = STATE.bracket["R32"] || [];
+  const seen = new Set();
+  const cands = [];
+  for (let i = k * span; i < (k + 1) * span && i < r32.length; i++) {
+    for (const t of [r32[i].teamA, r32[i].teamB]) {
+      if (!t || seen.has(t)) continue;
+      seen.add(t);
+      const w = STATE.teams[t]?.reach?.[roundKey] || 0;
+      if (w > 0) cands.push({ t, w });
+    }
+  }
+  cands.sort((a, b) => b.w - a.w);
+  return cands;
+}
+
+// Owner-coloured segmented bar for a future bracket slot + named top contenders.
+function projBar(roundKey, k) {
+  const cands = slotProjection(roundKey, k);
+  if (cands.length < 2) return "";
+  // Bar widths are normalised so the strip always fills; labels show each
+  // team's true probability of reaching the slot (c.w), which may sum to ~2
+  // across the match's two seats.
+  const total = cands.reduce((s, c) => s + c.w, 0) || 1;
+  const segs = cands.map((c) =>
+    `<span style="width:${(c.w / total * 100).toFixed(1)}%;background:${ownerColor(c.t)}"
+       title="${c.t} · ${ownerTag(c.t)} · ${pct(c.w)} to reach"></span>`).join("");
+  const top = cands.slice(0, 3).map((c) =>
+    `<span class="proj-name" data-team="${c.t}"><span class="dot" style="background:${ownerColor(c.t)}"></span>` +
+    `${abbr(c.t)} <b>${pct(c.w)}</b></span>`).join("");
+  return `<div class="proj"><div class="prob-bar proj-bar">${segs}</div>` +
+         `<div class="proj-names">${top}</div></div>`;
+}
+
+// Inner HTML for one match card — a real matchup, or a projected future slot.
+function matchInner(m, key, i, full) {
+  if (m.teamA && m.teamB) {
+    return matchHeader(m) +
+      teamRow(m.teamA, m.probA, m, "A", full) +
+      teamRow(m.teamB, m.probB, m, "B", full) +
+      probBar(m);
+  }
+  const pb = projBar(key, i);
+  if (pb) return `<div class="proj-head">Projected</div>${pb}`;
+  return teamRow(m.teamA, m.probA, m, "A", full) +
+         teamRow(m.teamB, m.probB, m, "B", full);
+}
+
 function renderBracket() {
   const wrap = $("#bracket");
   wrap.querySelectorAll(".connectors").forEach((s) => s.remove());
@@ -556,11 +610,7 @@ function renderBracket() {
       div.className = "match" + (known ? "" : " tbd");
       div.dataset.round = key;
       div.dataset.mi = i;
-      div.innerHTML =
-        matchHeader(m) +
-        teamRow(m.teamA, m.probA, m, "A") +
-        teamRow(m.teamB, m.probB, m, "B") +
-        probBar(m);
+      div.innerHTML = matchInner(m, key, i, false);
       body.appendChild(div);
     });
     col.appendChild(body);
@@ -574,7 +624,7 @@ function renderBracket() {
     nav.appendChild(btn);
   });
 
-  wrap.querySelectorAll(".team-row[data-team]").forEach((row) => {
+  wrap.querySelectorAll("[data-team]").forEach((row) => {
     row.addEventListener("click", () => openTeamSheet(row.dataset.team));
   });
 }
@@ -706,11 +756,7 @@ function renderFunnel() {
       div.className = "match" + (m.teamA && m.teamB ? "" : " tbd");
       div.dataset.round = key;
       div.dataset.mi = i;
-      div.innerHTML =
-        matchHeader(m) +
-        teamRow(m.teamA, m.probA, m, "A", true) +
-        teamRow(m.teamB, m.probB, m, "B", true) +
-        probBar(m);
+      div.innerHTML = matchInner(m, key, i, true);
       box.appendChild(div);
     });
     sec.appendChild(box);
@@ -734,7 +780,7 @@ function renderFunnel() {
     : `🏆<div class="champ-sub">Road to the Final</div>`;
   wrap.appendChild(tro);
 
-  wrap.querySelectorAll(".team-row[data-team]").forEach((row) => {
+  wrap.querySelectorAll("[data-team]").forEach((row) => {
     row.addEventListener("click", () => openTeamSheet(row.dataset.team));
   });
 }
@@ -798,7 +844,7 @@ function renderFixtures() {
     wrap.appendChild(div);
   });
 
-  wrap.querySelectorAll(".team-row[data-team]").forEach((row) => {
+  wrap.querySelectorAll("[data-team]").forEach((row) => {
     row.addEventListener("click", () => openTeamSheet(row.dataset.team));
   });
 }

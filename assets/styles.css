@@ -249,6 +249,23 @@ h1 { font-size: 1.15rem; margin: 0; letter-spacing: -0.02em; }
 .prob-bar { display: flex; height: 5px; background: var(--bg); }
 .prob-bar span { display: block; height: 100%; }
 
+/* Projected future-bracket slot: who's likely to fill it (owner-coloured). */
+.match.tbd:has(.proj) { opacity: 1; }
+.proj-head {
+  padding: 4px 9px; font-size: 0.62rem; font-weight: 800; letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--muted);
+  border-bottom: 1px solid var(--line); background: var(--panel-2);
+}
+.proj-bar { height: 8px; border-radius: 3px; overflow: hidden; margin: 7px 9px 6px; }
+.proj-bar span:not(:last-child) { border-right: 1px solid var(--bg); }
+.proj-names {
+  display: flex; flex-wrap: wrap; gap: 4px 10px; padding: 0 9px 8px;
+  font-size: 0.72rem; color: var(--muted);
+}
+.proj-name { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+.proj-name .dot { width: 8px; height: 8px; border-radius: 50%; }
+.proj-name b { color: var(--text); font-variant-numeric: tabular-nums; }
+
 /* The road builds to a climax: later rounds grow + glow toward the trophy. */
 .as-funnel .fround { position: relative; z-index: 1; }
 .as-funnel .fround[data-round="QF"] .team-full { font-size: 1.02rem; }

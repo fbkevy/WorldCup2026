@@ -367,6 +367,9 @@ def main():
             p["prevRank"] = ranks_before[p["id"]]
 
     if changed:
+        # Projected reach-% for every team (drives the coloured future-bracket
+        # slots). Cheap, local — recomputed whenever results/odds move.
+        wc_lib.compute_reach(state)
         state["source"] = "the-odds-api"
         state["updatedAt"] = now.isoformat()
         STATE_PATH.write_text(json.dumps(state, indent=2, ensure_ascii=False),
