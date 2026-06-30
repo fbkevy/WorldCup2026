@@ -433,6 +433,20 @@ body.has-selection .team-row.loser { opacity: 0.2; }
 .nn-own { color: var(--muted); font-size: 0.7rem; }
 .nn-score { margin-left: auto; font-weight: 800; font-variant-numeric: tabular-nums; }
 .nn-card.next .nn-score { color: var(--muted); font-weight: 700; font-size: 0.8rem; }
+.nn-pen { color: var(--muted); font-size: 0.72rem; font-weight: 700; margin-left: 3px; }
+.nn-goals {
+  font-size: 0.68rem; color: var(--muted); margin: -1px 0 3px 17px;
+  line-height: 1.3; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Goal scorers under a live match card */
+.match-goals {
+  padding: 5px 9px 6px; font-size: 0.66rem; color: var(--muted);
+  border-top: 1px solid var(--line); background: var(--panel-2);
+}
+.mg-row { display: flex; gap: 6px; line-height: 1.4; }
+.mg-code { font-weight: 800; color: var(--text); min-width: 30px; }
+.mg-list { min-width: 0; }
 
 /* Brief highlight when you tap Now/Next to jump to a match. */
 .match.flash { animation: matchflash 1.2s ease; }

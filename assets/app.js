@@ -16,7 +16,7 @@ let focusRound = null;      // round to scroll to (from a shared link / nav)
 
 // Must match the ?v= on the script tag in index.html. When a newer version is
 // deployed, open pages auto-reload to pick up new code (see checkForUpdate).
-const APP_VERSION = 19;
+const APP_VERSION = 20;
 
 // Initial view/player/round come from the URL (shared links) first, then
 // localStorage, then a width default. Keeps shared links reproducible.
@@ -63,6 +63,34 @@ const LIVE_NAME_MAP = {
   "Turkey": "Türkiye", "United States": "USA",
 };
 const liveCanon = (n) => LIVE_NAME_MAP[n] || n;
+
+// Goal scorers come as a Postgres array literal: {"Kylian Mbappé 45'","..."}.
+function parseScorers(s) {
+  if (!s || s === "null") return [];
+  const out = [];
+  const re = /"([^"]+)"/g;
+  let m;
+  while ((m = re.exec(s))) out.push(m[1]);
+  if (!out.length) {                       // unquoted fallback
+    s.replace(/[{}]/g, "").split(",").forEach((x) => { if (x.trim()) out.push(x.trim()); });
+  }
+  return out;
+}
+
+// "Kylian Mbappé 45'" / "Mbappé 74'" -> compact "Mbappé 45', 74'", grouping a
+// player's goals. Surname only to save space on mobile.
+function fmtScorers(list) {
+  const order = [], mins = {};
+  list.forEach((e) => {
+    const mt = String(e).match(/^(.*?)[\s ]+(\d+\+?\d*)'?\s*$/);
+    const name = mt ? mt[1].trim() : String(e).trim();
+    const min = mt ? mt[2] + "'" : "";
+    if (!(name in mins)) { mins[name] = []; order.push(name); }
+    if (min) mins[name].push(min);
+  });
+  const surname = (n) => { const p = n.split(/\s+/); return p[p.length - 1]; };
+  return order.map((n) => surname(n) + (mins[n].length ? " " + mins[n].join(", ") : "")).join(" · ");
+}
 let LIVE_SCORES = {};   // "TeamA|TeamB" (sorted) -> {h,a,hs,as,minute,minNum,finished}
 let LIVE_FETCHED_AT = 0; // when LIVE_SCORES was last refreshed (for minute interpolation)
 
@@ -80,10 +108,13 @@ async function fetchLiveScores() {
       const notstarted = te === "notstarted" || te === "";
       const live = !finished && !notstarted;
       const mn = parseInt(te, 10);   // "45+2" -> 45, "ht" -> NaN
+      const pi = (v) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : null; };
       map[[h, a].sort().join("|")] = {
         h, a, hs: g.home_score, as: g.away_score,
         minute: live ? g.time_elapsed : null,
         minNum: live && Number.isFinite(mn) ? mn : null, finished,
+        hsc: parseScorers(g.home_scorers), asc: parseScorers(g.away_scorers),
+        hp: pi(g.home_penalty_score), ap: pi(g.away_penalty_score),  // shootout tally
       };
     }
     LIVE_SCORES = map;
@@ -129,10 +160,15 @@ function liveFor(m) {
   if (!m.teamA || !m.teamB) return null;
   const e = LIVE_SCORES[[m.teamA, m.teamB].sort().join("|")];
   if (!e) return null;
-  const aScore = m.teamA === e.h ? e.hs : e.as;
-  const bScore = m.teamB === e.h ? e.hs : e.as;
+  const aHome = m.teamA === e.h;
+  const aScore = aHome ? e.hs : e.as;
+  const bScore = aHome ? e.as : e.hs;
   const minute = e.minNum != null ? liveMinuteFromFeed(e.minNum) : estMatchClock(m);
-  return { minute, finished: e.finished, aScore, bScore };
+  return {
+    minute, finished: e.finished, aScore, bScore,
+    aScorers: aHome ? e.hsc : e.asc, bScorers: aHome ? e.asc : e.hsc,
+    aPen: aHome ? e.hp : e.ap, bPen: aHome ? e.ap : e.hp,
+  };
 }
 
 // A match is "live" if the feed says it's in play, or (fallback) within the
@@ -314,12 +350,17 @@ function nnCard(x, kind) {
     ? (live ? `<span class="live-dot"></span>LIVE${ls && ls.minute != null ? ` ${fmtMin(ls.minute)}` : ""}` : "NOW")
     : `NEXT · ${localKickoff(m.kickoff)}`;
   const side = (t, s) => {
-    let val = "";
-    if (live && ls && ls.aScore != null) val = s === "A" ? ls.aScore : ls.bScore;
-    else if (kind === "next") val = pct(s === "A" ? m.probA : m.probB);
+    let val = "", pen = "";
+    if (live && ls && ls.aScore != null) {
+      val = s === "A" ? ls.aScore : ls.bScore;
+      const pv = s === "A" ? ls.aPen : ls.bPen;
+      if (pv != null) pen = `<span class="nn-pen">(${pv})</span>`;
+    } else if (kind === "next") val = pct(s === "A" ? m.probA : m.probB);
+    const sc = live && ls ? fmtScorers((s === "A" ? ls.aScorers : ls.bScorers) || []) : "";
+    const goals = sc ? `<div class="nn-goals">⚽ ${sc}</div>` : "";
     return `<div class="nn-team"><span class="dot" style="background:${ownerColor(t)}"></span>` +
       `<span class="nn-code">${abbr(t)}</span><span class="nn-own">${ownerTag(t)}</span>` +
-      `<span class="nn-score">${val}</span></div>`;
+      `<span class="nn-score">${val}${pen}</span></div>${goals}`;
   };
   return `<button class="nn-card ${kind}${live ? " live" : ""}" data-round="${k}" data-mi="${i}">` +
     `<div class="nn-label">${label}</div>${side(m.teamA, "A")}${side(m.teamB, "B")}</button>`;
@@ -562,13 +603,26 @@ function projBar(roundKey, k) {
          `<div class="proj-names">${top}</div></div>`;
 }
 
+// Goal scorers under a live match card (feed gives names + minutes).
+function liveGoals(m) {
+  if (!isLive(m)) return "";
+  const ls = liveFor(m);
+  if (!ls) return "";
+  const a = fmtScorers(ls.aScorers || []), b = fmtScorers(ls.bScorers || []);
+  if (!a && !b) return "";
+  const row = (t, s) => s
+    ? `<div class="mg-row"><span class="mg-code">${abbr(t)}</span><span class="mg-list">⚽ ${s}</span></div>`
+    : "";
+  return `<div class="match-goals">${row(m.teamA, a)}${row(m.teamB, b)}</div>`;
+}
+
 // Inner HTML for one match card — a real matchup, or a projected future slot.
 function matchInner(m, key, i, full) {
   if (m.teamA && m.teamB) {
     return matchHeader(m) +
       teamRow(m.teamA, m.probA, m, "A", full) +
       teamRow(m.teamB, m.probB, m, "B", full) +
-      probBar(m);
+      probBar(m) + liveGoals(m);
   }
   const pb = projBar(key, i);
   if (pb) return `<div class="proj-head">Projected</div>${pb}`;
