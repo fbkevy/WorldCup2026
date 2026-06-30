@@ -16,7 +16,7 @@ let focusRound = null;      // round to scroll to (from a shared link / nav)
 
 // Must match the ?v= on the script tag in index.html. When a newer version is
 // deployed, open pages auto-reload to pick up new code (see checkForUpdate).
-const APP_VERSION = 21;
+const APP_VERSION = 22;
 
 // Initial view/player/round come from the URL (shared links) first, then
 // localStorage, then a width default. Keeps shared links reproducible.
@@ -568,6 +568,9 @@ function probBar(m) {
 // NEXT round, so the weights sum to 1 across the slot — exactly one team
 // advances. Slot k in round R is fed by R32 matches [k*span, (k+1)*span).
 const NEXT_ROUND = { R32: "R16", R16: "QF", QF: "SF", SF: "F", F: "W" };
+// Official 2026 knockout date windows (no exact per-slot time until the matchup
+// is set, so we show the round's published window).
+const ROUND_DATES = { R16: "4–7 Jul", QF: "9–11 Jul", SF: "14–15 Jul", F: "19 Jul" };
 function slotProjection(roundKey, k) {
   const level = ROUND_KEYS.indexOf(roundKey);   // R32=0, R16=1, ...
   if (level <= 0) return [];
@@ -629,9 +632,10 @@ function matchInner(m, key, i, full) {
   }
   const pb = projBar(key, i);
   if (pb) {
-    // No "Projected" caption (clearly is); show the kickoff time when we have
-    // one (only set once the matchup firms up), otherwise no header.
-    const head = m.kickoff ? `<div class="proj-head">${localKickoff(m.kickoff)}</div>` : "";
+    // No "Projected" caption (clearly is). Show the exact kickoff once the
+    // matchup firms up; until then the official date window for the round.
+    const when = m.kickoff ? localKickoff(m.kickoff) : (ROUND_DATES[key] || "");
+    const head = when ? `<div class="proj-head">🗓 ${when}</div>` : "";
     return head + pb;
   }
   return teamRow(m.teamA, m.probA, m, "A", full) +
