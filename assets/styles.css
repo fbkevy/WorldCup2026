@@ -98,14 +98,16 @@ h1 { font-size: 1.15rem; margin: 0; letter-spacing: -0.02em; }
 .champion .dot { width: 14px; height: 14px; }
 
 /* ---------- Bracket ---------- */
-.bracket-wrap { padding: 14px 0 40px; }
+.bracket-wrap { padding: 0 0 40px; }
 .bracket-head {
   display: flex; align-items: center; justify-content: space-between;
   gap: 12px; padding: 8px 16px 14px; flex-wrap: wrap;
 }
+.sticky-top {
+  position: sticky; top: var(--ctrl-top, 0px); z-index: 20; background: var(--bg);
+}
 .head-controls {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  position: sticky; top: var(--ctrl-top, 0px); z-index: 20;
   background: var(--bg); padding: 8px 16px;
   border-bottom: 1px solid var(--line);
 }

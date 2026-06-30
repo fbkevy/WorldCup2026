@@ -16,7 +16,7 @@ let focusRound = null;      // round to scroll to (from a shared link / nav)
 
 // Must match the ?v= on the script tag in index.html. When a newer version is
 // deployed, open pages auto-reload to pick up new code (see checkForUpdate).
-const APP_VERSION = 16;
+const APP_VERSION = 17;
 
 // Initial view/player/round come from the URL (shared links) first, then
 // localStorage, then a width default. Keeps shared links reproducible.
@@ -63,7 +63,8 @@ const LIVE_NAME_MAP = {
   "Turkey": "Türkiye", "United States": "USA",
 };
 const liveCanon = (n) => LIVE_NAME_MAP[n] || n;
-let LIVE_SCORES = {};   // "TeamA|TeamB" (sorted) -> {h,a,hs,as,minute,finished}
+let LIVE_SCORES = {};   // "TeamA|TeamB" (sorted) -> {h,a,hs,as,minute,minNum,finished}
+let LIVE_FETCHED_AT = 0; // when LIVE_SCORES was last refreshed (for minute interpolation)
 
 async function fetchLiveScores() {
   try {
@@ -77,13 +78,37 @@ async function fetchLiveScores() {
       const te = String(g.time_elapsed || "").toLowerCase();
       const finished = te === "finished" || String(g.finished).toUpperCase() === "TRUE";
       const notstarted = te === "notstarted" || te === "";
+      const live = !finished && !notstarted;
+      const mn = parseInt(te, 10);   // "45+2" -> 45, "ht" -> NaN
       map[[h, a].sort().join("|")] = {
         h, a, hs: g.home_score, as: g.away_score,
-        minute: (!finished && !notstarted) ? g.time_elapsed : null, finished,
+        minute: live ? g.time_elapsed : null,
+        minNum: live && Number.isFinite(mn) ? mn : null, finished,
       };
     }
     LIVE_SCORES = map;
+    LIVE_FETCHED_AT = Date.now();
   } catch (e) { /* source down — fall back to time-based live */ }
+}
+
+// The feed only flags a game as "live" (no numeric minute), so estimate the
+// match clock from our own kickoff time: tick through the first half, hold at
+// halftime, then resume. Cap at 45 (1st half) / 90+10 so it can't run away if a
+// game is delayed or the feed is slow to mark it finished.
+function estMinuteFromKickoff(m) {
+  if (!m.kickoff) return null;
+  const e = Math.floor((Date.now() - Date.parse(m.kickoff)) / 60000);
+  if (e < 0) return null;
+  if (e <= 45) return e;              // first half
+  if (e <= 60) return 45;             // ~15 min halftime: hold at 45
+  return Math.min(e - 15, 100);       // second half (offset HT), cap 90+10
+}
+
+// If a numeric feed minute is ever available, anchor to it and add elapsed real
+// time since the fetch (same caps).
+function liveMinuteFromFeed(base) {
+  const extra = Math.max(0, Math.floor((Date.now() - LIVE_FETCHED_AT) / 60000));
+  return Math.min(base + extra, base < 45 ? 45 : 100);
 }
 
 // Live info for one of our matches, oriented to teamA/teamB.
@@ -93,7 +118,8 @@ function liveFor(m) {
   if (!e) return null;
   const aScore = m.teamA === e.h ? e.hs : e.as;
   const bScore = m.teamB === e.h ? e.hs : e.as;
-  return { minute: e.minute, finished: e.finished, aScore, bScore };
+  const minute = e.minNum != null ? liveMinuteFromFeed(e.minNum) : estMinuteFromKickoff(m);
+  return { minute, finished: e.finished, aScore, bScore };
 }
 
 // A match is "live" if the feed says it's in play, or (fallback) within the
@@ -1044,7 +1070,10 @@ async function pollLiveScores() {
   if (!document.hidden) {
     await fetchLiveScores();
     const sig = JSON.stringify(LIVE_SCORES);
-    if (sig !== lastLiveSig && STATE) {
+    // Re-render on any change, and also each poll while a game is live so the
+    // interpolated minute ticks forward between feed updates.
+    const anyLive = STATE && ROUND_KEYS.some((k) => (STATE.bracket[k] || []).some(isLive));
+    if ((sig !== lastLiveSig || anyLive) && STATE) {
       lastLiveSig = sig;
       const sl = $("#bracket").scrollLeft;
       renderTree();
