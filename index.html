@@ -11,7 +11,7 @@
   <meta property="og:description" content="Who's winning our draw? Live odds-based win probabilities + bracket." />
   <meta property="og:type" content="website" />
   <link rel="icon" href="data:image/svg+xml,&lt;svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22&gt;&lt;text y=%22.9em%22 font-size=%2290%22&gt;⚽&lt;/text&gt;&lt;/svg&gt;" />
-  <link rel="stylesheet" href="assets/styles.css?v=11" />
+  <link rel="stylesheet" href="assets/styles.css?v=13" />
 </head>
 <body>
   <!-- Sticky standings: sidebar on desktop, collapsible top bar on phone -->
@@ -42,11 +42,16 @@
         <button data-view="fixtures" role="tab">Fixtures</button>
       </div>
       <button id="sel-chip" class="sel-chip" hidden></button>
+      <button id="share-btn" class="share-btn" aria-label="Share this view">↗ Share</button>
       <nav id="round-nav" class="round-nav" aria-label="Jump to round"></nav>
     </div>
+    <div id="live-strip" class="live-strip" hidden></div>
+    <div id="highlights" class="highlights" hidden></div>
     <div id="champion" class="champion" hidden></div>
     <div id="bracket" class="bracket"></div>
   </main>
+  <canvas id="confetti" aria-hidden="true"></canvas>
+  <div id="toast" class="toast" hidden></div>
 
   <!-- Team detail / player tap sheet -->
   <div id="sheet" class="sheet" hidden>
@@ -56,6 +61,6 @@
     </div>
   </div>
 
-  <script src="assets/app.js?v=11"></script>
+  <script src="assets/app.js?v=13"></script>
 </body>
 </html>

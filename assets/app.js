@@ -89,10 +89,14 @@ function localKickoff(iso) {
   });
 }
 
+let HISTORY = null;
+
 async function load() {
   const res = await fetch("data/state.json?t=" + Date.now());
   STATE = await res.json();
   PLAYER_BY_ID = Object.fromEntries(STATE.players.map((p) => [p.id, p]));
+  fetch("data/history.json?t=" + Date.now())
+    .then((r) => (r.ok ? r.json() : null)).then((h) => { HISTORY = h; }).catch(() => {});
 
   // Apply player + round from a shared link.
   const pid = URL_PARAMS.get("player");
@@ -128,6 +132,8 @@ function render() {
   $("#alive-count").textContent = aliveCount();
   renderSourceBadge();
   renderChampion();
+  renderLiveStrip();
+  renderHighlights();
   updateViewSeg();
   // Layout-dependent passes run after the browser lays the tree out.
   requestAnimationFrame(() => {
@@ -184,6 +190,97 @@ function renderChampion() {
   el.hidden = false;
   el.innerHTML = `<span class="dot" style="background:${owner ? owner.color : ""}"></span>
     🏆 Champions: <strong>${champ}</strong>${owner ? ` — ${owner.name} wins the draw!` : ""}`;
+  if (celebratedFor !== champ) { celebratedFor = champ; fireConfetti(owner ? owner.color : "#ffd43b"); }
+}
+
+// ---- Share (#1) ----
+async function shareView() {
+  const url = location.href;
+  try {
+    if (navigator.share) await navigator.share({ title: "World Cup Draw 2026", url });
+    else { await navigator.clipboard.writeText(url); toast("Link copied"); }
+  } catch (e) { /* user cancelled / not allowed */ }
+}
+let toastTimer;
+function toast(msg) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, 2200);
+}
+
+// ---- Live-now strip (#5) ----
+function renderLiveStrip() {
+  const el = $("#live-strip");
+  const live = [];
+  ROUND_KEYS.forEach((k) => (STATE.bracket[k] || []).forEach((m) => { if (isLive(m)) live.push(m); }));
+  if (!live.length) { el.hidden = true; el.innerHTML = ""; return; }
+  el.hidden = false;
+  el.innerHTML = `<span class="live-dot"></span>` + live.map((m) =>
+    `<span class="ls-game">${abbr(m.teamA)}${m.score ? " " + m.score.split("–")[0] : ""}` +
+    `<span class="ls-v">v</span>${abbr(m.teamB)}${m.score ? " " + m.score.split("–")[1] : ""}</span>`
+  ).join("");
+}
+
+// ---- Highlights ticker: biggest riser + latest upset (#3) ----
+function renderHighlights() {
+  const el = $("#highlights");
+  const chips = [];
+
+  const ranked = [...STATE.players].map((p) => ({ p, prob: playerProb(p) }))
+    .sort((a, b) => b.prob - a.prob);
+  let best = null;
+  ranked.forEach(({ p }, i) => {
+    if (p.prevRank != null) {
+      const d = p.prevRank - (i + 1);
+      if (d > 0 && (!best || d > best.d)) best = { name: p.name, color: p.color, d };
+    }
+  });
+  if (best) chips.push(`<span class="hl-chip"><i class="up">▲</i> <b style="color:${best.color}">${best.name}</b> up ${best.d}</span>`);
+
+  // Latest upset: a decided match the underdog won (winning side prob < 0.45).
+  let upset = null;
+  ROUND_KEYS.forEach((k) => (STATE.bracket[k] || []).forEach((m) => {
+    if (m.winner && m.score) {
+      const wp = m.winner === "A" ? m.probA : m.probB;
+      const wt = m.winner === "A" ? m.teamA : m.teamB;
+      const lt = m.winner === "A" ? m.teamB : m.teamA;
+      const ko = Date.parse(m.kickoff) || 0;
+      if (wp != null && wp < 0.45 && (!upset || ko > upset.ko)) upset = { wt, lt, score: m.score, ko };
+    }
+  }));
+  if (upset) chips.push(`<span class="hl-chip">⚡ Upset: <b>${upset.wt}</b> beat ${upset.lt} ${upset.score}</span>`);
+
+  if (!chips.length) { el.hidden = true; el.innerHTML = ""; return; }
+  el.hidden = false;
+  el.innerHTML = chips.join("");
+}
+
+// ---- Confetti (#2) ----
+let celebratedFor = null;
+function fireConfetti(color) {
+  const cv = $("#confetti");
+  if (!cv) return;
+  const ctx = cv.getContext("2d");
+  cv.width = window.innerWidth; cv.height = window.innerHeight;
+  const colors = [color, "#ffd43b", "#2f9e44", "#1c7ed6", "#e6394a", "#7048e8"];
+  const bits = Array.from({ length: 160 }, () => ({
+    x: Math.random() * cv.width, y: -20 - Math.random() * cv.height * 0.5,
+    r: 4 + Math.random() * 5, c: colors[(Math.random() * colors.length) | 0],
+    vy: 2 + Math.random() * 4, vx: -2 + Math.random() * 4, rot: Math.random() * 6,
+  }));
+  const start = Date.now();
+  (function frame() {
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    bits.forEach((b) => {
+      b.y += b.vy; b.x += b.vx; b.rot += 0.1;
+      ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.rot);
+      ctx.fillStyle = b.c; ctx.fillRect(-b.r / 2, -b.r / 2, b.r, b.r * 1.6); ctx.restore();
+    });
+    if (Date.now() - start < 4000) requestAnimationFrame(frame);
+    else ctx.clearRect(0, 0, cv.width, cv.height);
+  })();
 }
 
 function renderStandings() {
@@ -314,6 +411,10 @@ function renderBracket() {
     lbl.addEventListener("click", () => toggleRound(key));
     col.appendChild(lbl);
 
+    // Matches live in their own centred body so the round label doesn't skew
+    // the vertical distribution (keeps the final near centre, not 70% down).
+    const body = document.createElement("div");
+    body.className = "round-body";
     matches.forEach((m, i) => {
       const known = m.teamA && m.teamB;
       const div = document.createElement("div");
@@ -325,8 +426,9 @@ function renderBracket() {
         teamRow(m.teamA, m.probA, m, "A") +
         teamRow(m.teamB, m.probB, m, "B") +
         probBar(m);
-      col.appendChild(div);
+      body.appendChild(div);
     });
+    col.appendChild(body);
     wrap.appendChild(col);
 
     const btn = document.createElement("button");
@@ -665,25 +767,75 @@ function renderSelChip() {
   }
 }
 
+// Tiny win-% history chart for a player (from data/history.json).
+function sparkline(pid, color) {
+  if (!HISTORY || !HISTORY.snapshots || HISTORY.snapshots.length < 2) return "";
+  const series = HISTORY.snapshots.map((s) => s.probs[pid]).filter((v) => v != null);
+  if (series.length < 2) return "";
+  const w = 260, h = 54, pad = 5;
+  const max = Math.max(...series), min = Math.min(...series), range = (max - min) || 1;
+  const pts = series.map((v, i) => {
+    const x = pad + (i / (series.length - 1)) * (w - 2 * pad);
+    const y = pad + (1 - (v - min) / range) * (h - 2 * pad);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+  const first = series[0], last = series[series.length - 1], up = last >= first;
+  return `<div class="spark">
+    <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+      <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2"
+        stroke-linejoin="round" stroke-linecap="round"/></svg>
+    <div class="spark-cap">win% over time
+      <span style="color:${up ? "#2ee59d" : "#ff6b6b"}">${up ? "▲" : "▼"} now ${pct(last)}</span></div>
+  </div>`;
+}
+
+function deepestStageLabel(ownerId) {
+  let deepest = -1;
+  ROUND_KEYS.forEach((k, ri) => (STATE.bracket[k] || []).forEach((m) => {
+    [m.teamA, m.teamB].forEach((t) => {
+      if (t && STATE.teams[t]?.owner === ownerId) deepest = Math.max(deepest, ri);
+    });
+  }));
+  return deepest >= 0 ? ROUNDS[deepest][1] : "Group stage";
+}
+
 function openTeamSheet(teamName) {
   const team = STATE.teams[teamName];
   if (!team) return;
   const owner = PLAYER_BY_ID[team.owner];
+  if (!owner) { $("#sheet").hidden = false; return; }
+
+  const ranked = [...STATE.players].map((p) => ({ p, prob: playerProb(p) }))
+    .sort((a, b) => b.prob - a.prob);
+  const rank = ranked.findIndex((r) => r.p.id === owner.id) + 1;
+  const combined = playerProb(owner);
+  const aliveTeams = owner.teams.filter((t) => STATE.teams[t]?.alive);
+  const outTeams = owner.teams.filter((t) => !STATE.teams[t]?.alive);
+  const best = [...aliveTeams].sort((a, b) => STATE.teams[b].winProb - STATE.teams[a].winProb)[0];
+
+  const teamLine = (t) => {
+    const tm = STATE.teams[t];
+    const o = PLAYER_BY_ID[tm.owner];
+    return `<div class="sheet-team ${tm.alive ? "" : "out"}">
+      <span class="dot" style="background:${o ? o.color : ""}"></span>
+      <span class="team-name">${t}</span>
+      <span class="team-prob">${tm.alive ? pct(tm.winProb) : "out"}</span></div>`;
+  };
+
   $("#sheet-content").innerHTML = `
-    <h2>${teamName}</h2>
-    <p class="sub">Owned by ${owner ? owner.name : "?"} ·
-      ${team.alive ? "still in" : "eliminated"} ·
-      tournament win ${pct(team.winProb)}</p>
-    <div class="sheet-team" style="border:none">
-      <span class="dot" style="background:${owner ? owner.color : ""}"></span>
-      <strong>${owner ? owner.name : "?"}'s teams</strong>
+    <h2><span class="dot" style="background:${owner.color}"></span>${teamName}</h2>
+    <p class="sub">${owner.name}'s team · ${team.alive ? "still in" : "eliminated"}</p>
+    <div class="stat-grid">
+      <div class="stat"><span class="sv">#${rank}</span><span class="sl">rank</span></div>
+      <div class="stat"><span class="sv">${pct(combined)}</span><span class="sl">to win draw</span></div>
+      <div class="stat"><span class="sv">${aliveTeams.length}/${owner.teams.length}</span><span class="sl">alive</span></div>
+      <div class="stat"><span class="sv">${best ? abbr(best) : "–"}</span><span class="sl">best team</span></div>
     </div>
-    ${owner ? owner.teams.map((t) => {
-      const tm = STATE.teams[t];
-      return `<div class="sheet-team ${tm.alive ? "" : "out"}">
-        <span class="team-name">${t}</span>
-        <span class="team-prob">${pct(tm.winProb)}</span></div>`;
-    }).join("") : ""}`;
+    <p class="sub">Deepest run: <strong>${deepestStageLabel(owner.id)}</strong></p>
+    ${sparkline(owner.id, owner.color)}
+    <div class="sheet-section">Still in (${aliveTeams.length})</div>
+    ${aliveTeams.map(teamLine).join("") || `<div class="sheet-team out">none</div>`}
+    ${outTeams.length ? `<div class="sheet-section">Knocked out (${outTeams.length})</div>` + outTeams.map(teamLine).join("") : ""}`;
   $("#sheet").hidden = false;
 }
 
@@ -695,6 +847,7 @@ document.querySelectorAll("#view-seg button").forEach((b) =>
 $("#sel-chip").addEventListener("click", () => {
   if (selectedPlayer) togglePlayer(selectedPlayer);   // clears the filter
 });
+$("#share-btn").addEventListener("click", shareView);
 $("#sheet-close").addEventListener("click", () => ($("#sheet").hidden = true));
 $("#sheet").addEventListener("click", (e) => {
   if (e.target.id === "sheet") $("#sheet").hidden = true;
@@ -737,6 +890,8 @@ async function refreshData() {
     $("#alive-count").textContent = aliveCount();
     renderSourceBadge();
     renderChampion();
+    renderLiveStrip();
+    renderHighlights();
     markNextGame();
     if (viewMode === "bracket") requestAnimationFrame(drawConnectors);
   } catch (e) { /* offline / transient — ignore */ }
@@ -756,6 +911,7 @@ setInterval(() => {
     const sl = $("#bracket").scrollLeft;
     renderTree();
     $("#bracket").scrollLeft = sl;
+    renderLiveStrip();
     markNextGame();
     if (viewMode === "bracket") requestAnimationFrame(drawConnectors);
   }
