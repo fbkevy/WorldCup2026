@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-06-30T06:06:21+00:00",
+  "updatedAt": "2026-06-30T06:07:48+00:00",
   "source": "the-odds-api",
   "currentRound": "R32",
   "players": [
@@ -460,8 +460,8 @@
         "id": "r32-13",
         "teamA": "Argentina",
         "teamB": "Cape Verde",
-        "probA": 0.938,
-        "probB": 0.062,
+        "probA": 0.939,
+        "probB": 0.061,
         "winner": null,
         "kickoff": "2026-07-03T22:00:00Z"
       },
