@@ -16,7 +16,7 @@ let focusRound = null;      // round to scroll to (from a shared link / nav)
 
 // Must match the ?v= on the script tag in index.html. When a newer version is
 // deployed, open pages auto-reload to pick up new code (see checkForUpdate).
-const APP_VERSION = 17;
+const APP_VERSION = 18;
 
 // Initial view/player/round come from the URL (shared links) first, then
 // localStorage, then a width default. Keeps shared links reproducible.
@@ -92,24 +92,37 @@ async function fetchLiveScores() {
 }
 
 // The feed only flags a game as "live" (no numeric minute), so estimate the
-// match clock from our own kickoff time: tick through the first half, hold at
-// halftime, then resume. Cap at 45 (1st half) / 90+10 so it can't run away if a
-// game is delayed or the feed is slow to mark it finished.
-function estMinuteFromKickoff(m) {
+// match clock from our own kickoff time. Because kickoff is a fixed anchor (it
+// can't self-correct like a feed minute would), we must bake in the wall time
+// that isn't played minutes: first-half stoppage (where a cooling/hydration
+// break lands), the halftime interval, and second-half stoppage. The official
+// clock keeps running through cooling breaks, so that time surfaces as longer
+// stoppage (45+/90+) rather than a pause — only halftime freezes the clock.
+const ST1 = 5;   // 1st-half stoppage allowance (incl. ~3' cooling break)
+const HT = 15;   // halftime interval (clock frozen)
+const H2 = 45 + ST1 + HT;   // wall minutes from KO until the 2nd half kicks off
+function estMatchClock(m) {
   if (!m.kickoff) return null;
-  const e = Math.floor((Date.now() - Date.parse(m.kickoff)) / 60000);
+  const e = Math.floor((Date.now() - Date.parse(m.kickoff)) / 60000);  // wall min since KO
   if (e < 0) return null;
-  if (e <= 45) return e;              // first half
-  if (e <= 60) return 45;             // ~15 min halftime: hold at 45
-  return Math.min(e - 15, 100);       // second half (offset HT), cap 90+10
+  if (e < 45) return String(e);                       // first half
+  if (e < 45 + ST1) return "45+" + (e - 45);          // 1st-half stoppage / cooling break
+  if (e < H2) return "HT";                             // halftime (frozen)
+  const mm = 46 + (e - H2);                            // second-half running minute
+  if (mm <= 90) return String(mm);
+  return "90+" + Math.min(mm - 90, 10);               // 2nd-half stoppage, cap +10
 }
 
 // If a numeric feed minute is ever available, anchor to it and add elapsed real
 // time since the fetch (same caps).
 function liveMinuteFromFeed(base) {
   const extra = Math.max(0, Math.floor((Date.now() - LIVE_FETCHED_AT) / 60000));
-  return Math.min(base + extra, base < 45 ? 45 : 100);
+  return String(Math.min(base + extra, base < 45 ? 45 : 100));
 }
+
+// Format a clock value for display: append ' to numeric minutes ("63" -> "63'",
+// "45+2" -> "45+2'") but leave word labels alone ("HT").
+const fmtMin = (v) => v == null ? "" : (/\d$/.test(String(v)) ? `${v}'` : `${v}`);
 
 // Live info for one of our matches, oriented to teamA/teamB.
 function liveFor(m) {
@@ -118,7 +131,7 @@ function liveFor(m) {
   if (!e) return null;
   const aScore = m.teamA === e.h ? e.hs : e.as;
   const bScore = m.teamB === e.h ? e.hs : e.as;
-  const minute = e.minNum != null ? liveMinuteFromFeed(e.minNum) : estMinuteFromKickoff(m);
+  const minute = e.minNum != null ? liveMinuteFromFeed(e.minNum) : estMatchClock(m);
   return { minute, finished: e.finished, aScore, bScore };
 }
 
@@ -141,7 +154,7 @@ function matchHeader(m) {
   if (isLive(m)) {
     const ls = liveFor(m);
     const sc = ls && ls.aScore != null ? ` ${ls.aScore}–${ls.bScore}` : "";
-    const min = ls && ls.minute ? ` ${ls.minute}'` : "";
+    const min = ls && ls.minute != null ? ` ${fmtMin(ls.minute)}` : "";
     return `<div class="match-time live"><span class="live-dot"></span>LIVE${min}${sc}</div>`;
   }
   if (!m.kickoff) return "";
@@ -298,7 +311,7 @@ function nnCard(x, kind) {
   const live = isLive(m);
   const ls = liveFor(m);
   const label = kind === "now"
-    ? (live ? `<span class="live-dot"></span>LIVE${ls && ls.minute ? ` ${ls.minute}'` : ""}` : "NOW")
+    ? (live ? `<span class="live-dot"></span>LIVE${ls && ls.minute != null ? ` ${fmtMin(ls.minute)}` : ""}` : "NOW")
     : `NEXT · ${localKickoff(m.kickoff)}`;
   const side = (t, s) => {
     let val = "";
