@@ -172,7 +172,7 @@ def apply_scores(state, events):
         if len(sc) == 2:
             finished[frozenset(sc)] = sc
 
-    newly = []
+    newly, level = [], []
     for rnd in state["bracket"].values():
         for m in rnd:
             a, b = m.get("teamA"), m.get("teamB")
@@ -191,9 +191,32 @@ def apply_scores(state, events):
                 newly.append(m["id"])
                 print(f"Result: {a} {sa}-{sb} {b} -> {m['winner']}", file=sys.stderr)
             else:
-                print(f"NOTE: {a} v {b} completed level {sa}-{sb} "
-                      f"(penalties?) — set winner manually", file=sys.stderr)
-    return newly
+                # Level after normal/extra time -> decided on penalties. The
+                # score line can't tell us who won; resolve via the outright
+                # market (the loser drops out) back in main().
+                level.append(m)
+                print(f"Penalty shootout: {a} v {b} {sa}-{sb} — resolving via market",
+                      file=sys.stderr)
+    return newly, level
+
+
+def resolve_penalties(level_matches, alive_set):
+    """Decide shootout winners from the outright market: the team still listed
+    (alive_set) advanced, the absent one is out. Returns ids newly decided."""
+    decided = []
+    for m in level_matches:
+        a_in = canon(m["teamA"]) in alive_set
+        b_in = canon(m["teamB"]) in alive_set
+        if a_in != b_in:                      # exactly one still in the market
+            m["winner"] = "A" if a_in else "B"
+            m["score"] = (m.get("score") or "") + " p"
+            decided.append(m["id"])
+            won = m["teamA"] if a_in else m["teamB"]
+            print(f"Shootout result: {won} advances (pens)", file=sys.stderr)
+        else:
+            print(f"Shootout for {m['teamA']} v {m['teamB']} not resolvable yet "
+                  f"(market not updated) — will retry", file=sys.stderr)
+    return decided
 
 
 def games_finishing(state, now):
@@ -242,6 +265,26 @@ def fetch_and_apply_odds(state, regions):
     print(f"Updated h2h for {matched} live matches", file=sys.stderr)
 
 
+HISTORY_PATH = ROOT / "data" / "history.json"
+
+
+def append_history(state):
+    """Append this update's player win-probabilities to data/history.json."""
+    probs = {p["id"]: round(sum(state["teams"][t]["winProb"]
+                                for t in p["teams"] if state["teams"][t].get("alive")), 5)
+             for p in state["players"]}
+    try:
+        hist = json.loads(HISTORY_PATH.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        hist = {"snapshots": []}
+    snaps = hist.get("snapshots", [])
+    if snaps and snaps[-1].get("t") == state["updatedAt"]:
+        return
+    snaps.append({"t": state["updatedAt"], "probs": probs})
+    hist["snapshots"] = snaps[-800:]
+    HISTORY_PATH.write_text(json.dumps(hist, ensure_ascii=False), encoding="utf-8")
+
+
 def compute_ranks(state):
     """Player id -> 1-based rank by combined win prob of alive teams."""
     sums = {p["id"]: sum(state["teams"][t]["winProb"]
@@ -259,35 +302,42 @@ def main():
     have_key = bool(os.environ.get("ODDS_API_KEY"))
     regions = os.environ.get("ODDS_REGIONS", "uk")
 
-    finishing = games_finishing(state, now)
     baseline = now.hour in BASELINE_HOURS and now.minute < 30
 
-    # Safety net: ANY past-kickoff game still without a winner (e.g. a tick was
-    # missed during its result window). We re-check these at the baseline so no
-    # finished game can be silently left unresolved.
-    pending = []
+    # Any past-kickoff game still without a winner (incl. one a missed/late cron
+    # never caught). No upper time bound — so nothing can be silently left
+    # unresolved. We check these on EVERY run (GitHub's cron is unreliable, and
+    # credits are plentiful), not just at the baseline.
+    pending, inplay = [], []
     for rnd in state["bracket"].values():
         for m in rnd:
             if m.get("teamA") and m.get("teamB") and m.get("winner") is None:
                 ko = parse_iso(m.get("kickoff"))
-                if ko and (now - ko).total_seconds() / 60 >= SCORE_CHECK_MIN:
+                if not ko:
+                    continue
+                age = (now - ko).total_seconds() / 60
+                if age >= SCORE_CHECK_MIN:
                     pending.append(m["id"])
+                if 0 <= age <= SCORE_CHECK_MAX:
+                    inplay.append(m["id"])   # in play / just finished -> live odds
 
-    check_results = bool(finishing) or forced or (baseline and bool(pending))
+    check_results = forced or bool(pending)
 
-    if not have_key and (check_results or baseline):
+    if not have_key and (check_results or baseline or inplay):
         print("ERROR: ODDS_API_KEY not set", file=sys.stderr)
         sys.exit(1)
 
     changed = False
     newly = []
 
-    # 1) Poll results -> auto-set winners (uses API `completed` flag, so extra
-    #    time / penalties are handled).
+    # 1) Poll results -> auto-set winners. Penalty shootouts (level scores) are
+    #    resolved from the outright market (the loser drops out).
     if have_key and check_results:
-        print(f"Checking results — finishing:{len(finishing)} pending:{len(pending)}"
+        print(f"Checking results — pending:{len(pending)} inplay:{len(inplay)}"
               f"{' (forced)' if forced else ''}", file=sys.stderr)
-        newly = apply_scores(state, fetch_scores())
+        newly, level = apply_scores(state, fetch_scores())
+        if level:
+            newly += resolve_penalties(level, set(fetch_outrights(regions)))
         if newly:
             changed = True
 
@@ -295,13 +345,13 @@ def main():
     # their kickoff time + h2h odds in this same run (no one-cycle lag).
     wc_lib.advance(state)
 
-    # 2) Refresh odds at the baseline, when forced, or when a result just landed
-    #    (so standings/probabilities reflect the new bracket).
-    if have_key and (baseline or forced or newly):
+    # 2) Refresh odds: at the baseline, when forced, when a result just landed,
+    #    OR while any game is in play (live, mid-match odds movement).
+    if have_key and (baseline or forced or newly or inplay):
         fetch_and_apply_odds(state, regions)
         changed = True
 
-    if not (check_results or baseline):
+    if not (check_results or baseline or inplay):
         print("Nothing due — no API call.", file=sys.stderr)
 
     # When a result lands, freeze each player's pre-result rank so the site can
@@ -315,6 +365,7 @@ def main():
         state["updatedAt"] = now.isoformat()
         STATE_PATH.write_text(json.dumps(state, indent=2, ensure_ascii=False),
                               encoding="utf-8")
+        append_history(state)
         print("Wrote", STATE_PATH, file=sys.stderr)
     else:
         print("No state change — not writing.", file=sys.stderr)

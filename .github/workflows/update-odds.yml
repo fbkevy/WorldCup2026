@@ -2,15 +2,20 @@ name: Update odds
 
 on:
   schedule:
-    # Tick every 30 min. The script (scripts/fetch_odds.py) decides whether to
-    # actually call the API: 3x/day baseline + once ~30 min after each game.
-    # GitHub Actions minutes are free on public repos; API credits are the limit,
-    # so the gating lives in the script, not the cron.
-    - cron: "*/30 * * * *"
+    # Tick every 10 min. GitHub heavily throttles frequent scheduled crons, so
+    # in practice this fires irregularly (sometimes hours apart) — that's fine:
+    # the script catches up ALL unresolved games on whatever run does fire.
+    # API credits are plentiful (well under the 500/mo cap), so we check often.
+    - cron: "*/10 * * * *"
   workflow_dispatch: {}   # manual run (forces a fetch regardless of schedule)
 
 permissions:
   contents: write
+
+# Never run two updates at once (avoids push races); let the running one finish.
+concurrency:
+  group: update-odds
+  cancel-in-progress: false
 
 jobs:
   update:
@@ -33,9 +38,12 @@ jobs:
         run: |
           git config user.name "odds-bot"
           git config user.email "odds-bot@users.noreply.github.com"
-          if ! git diff --quiet -- data/state.json; then
-            git add data/state.json
+          if ! git diff --quiet -- data/; then
+            git add data/state.json data/history.json
             git commit -m "Update odds ($(date -u '+%Y-%m-%d %H:%M UTC'))"
+            # Rebase on any changes pushed meanwhile (e.g. manual edits) so the
+            # push can't fail on a moved remote.
+            git pull --rebase --autostash origin main || true
             git push
           else
             echo "No odds change."
