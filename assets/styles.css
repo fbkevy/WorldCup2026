@@ -201,6 +201,11 @@ h1 { font-size: 1.15rem; margin: 0; letter-spacing: -0.02em; }
   padding: 4px 9px; font-size: 0.68rem; color: var(--muted);
   border-bottom: 1px solid var(--line); background: var(--panel-2);
 }
+.match-time.done { color: var(--text); font-weight: 700; }
+.match-time.done .ft {
+  color: var(--muted); font-weight: 800; font-size: 0.6rem; letter-spacing: 0.04em;
+  margin-right: 4px;
+}
 
 /* ---------- Funnel view (vertical "Road to the Final") ---------- */
 .bracket.as-funnel {

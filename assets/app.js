@@ -16,7 +16,7 @@ let focusRound = null;      // round to scroll to (from a shared link / nav)
 
 // Must match the ?v= on the script tag in index.html. When a newer version is
 // deployed, open pages auto-reload to pick up new code (see checkForUpdate).
-const APP_VERSION = 24;
+const APP_VERSION = 25;
 
 // Initial view/player/round come from the URL (shared links) first, then
 // localStorage, then a width default. Keeps shared links reproducible.
@@ -82,14 +82,16 @@ function parseScorers(s) {
 function fmtScorers(list) {
   const order = [], mins = {};
   list.forEach((e) => {
-    const mt = String(e).match(/^(.*?)[\s ]+(\d+\+?\d*)'?\s*$/);
-    const name = mt ? mt[1].trim() : String(e).trim();
-    const min = mt ? mt[2] + "'" : "";
+    const str = String(e).trim();
+    const mt = str.match(/^(.*?)\s+(\d+(?:\+\d+)?)'?\s*(\([a-z]+\))?\s*$/i);
+    const rawName = mt ? mt[1].trim() : str;
+    const parts = rawName.split(/\s+/);
+    const name = parts[parts.length - 1] || rawName;   // surname (drops leading "H.")
+    const min = mt ? mt[2] + "'" + (mt[3] || "") : "";
     if (!(name in mins)) { mins[name] = []; order.push(name); }
     if (min) mins[name].push(min);
   });
-  const surname = (n) => { const p = n.split(/\s+/); return p[p.length - 1]; };
-  return order.map((n) => surname(n) + (mins[n].length ? " " + mins[n].join(", ") : "")).join(" · ");
+  return order.map((n) => n + (mins[n].length ? " " + mins[n].join(", ") : "")).join(" · ");
 }
 let LIVE_SCORES = {};   // "TeamA|TeamB" (sorted) -> {h,a,hs,as,minute,minNum,finished}
 let LIVE_FETCHED_AT = 0; // when LIVE_SCORES was last refreshed (for minute interpolation)
@@ -131,7 +133,9 @@ async function fetchLiveScores() {
 // stoppage (45+/90+) rather than a pause — only halftime freezes the clock.
 const ST1 = 5;   // 1st-half stoppage allowance (incl. ~3' cooling break)
 const HT = 15;   // halftime interval (clock frozen)
-const H2 = 45 + ST1 + HT;   // wall minutes from KO until the 2nd half kicks off
+const LAG = 3;   // typical KO-lateness + restart slack; without it the estimate
+                 // consistently ran a few minutes AHEAD by full time
+const H2 = 45 + ST1 + HT + LAG;   // wall minutes from KO until the 2nd half kicks off
 function estMatchClock(m) {
   if (!m.kickoff) return null;
   const e = Math.floor((Date.now() - Date.parse(m.kickoff)) / 60000);  // wall min since KO
@@ -171,6 +175,18 @@ function liveFor(m) {
   };
 }
 
+// Provisional full-time result from the live feed for a match the bot hasn't
+// resolved yet (the Odds-API result can lag the final whistle by many minutes).
+// Lets the card show FT + score instead of reverting to pre-match odds.
+function feedFinal(m) {
+  if (!m.teamA || !m.teamB || m.winner != null) return null;
+  const ls = liveFor(m);
+  if (!ls || !ls.finished) return null;
+  const a = Number(ls.aScore), b = Number(ls.bScore);
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+  return { a, b, winner: a > b ? "A" : b > a ? "B" : null };  // null = level (pens)
+}
+
 // A match is "live" if the feed says it's in play, or (fallback) within the
 // kickoff window and not yet resolved.
 function isLive(m) {
@@ -192,6 +208,10 @@ function matchHeader(m) {
     const sc = ls && ls.aScore != null ? ` ${ls.aScore}–${ls.bScore}` : "";
     const min = ls && ls.minute != null ? ` ${fmtMin(ls.minute)}` : "";
     return `<div class="match-time live"><span class="live-dot"></span>LIVE${min}${sc}</div>`;
+  }
+  const ff = feedFinal(m);
+  if (ff) {
+    return `<div class="match-time done"><span class="ft">FT</span> ${ff.a}–${ff.b}</div>`;
   }
   if (!m.kickoff) return "";
   const decided = m.winner != null;
@@ -515,14 +535,18 @@ function teamRow(teamName, prob, match, side, full) {
     return `<div class="team-row tbd-row"><span class="team-code tbd-name">—</span></div>`;
   }
   const team = STATE.teams[teamName];
-  const decided = match.winner != null;
-  const isWinner = match.winner === side;
+  // Bot result if set; otherwise a provisional full-time result from the feed.
+  const ff = match.winner == null ? feedFinal(match) : null;
+  const decided = match.winner != null || ff != null;
+  const winSide = match.winner != null ? match.winner : ff && ff.winner;
+  const isWinner = winSide === side;
   const owner = team?.owner;
   const sel = selectedPlayer && owner === selectedPlayer ? " match-team-selected" : "";
-  const cls = decided ? (isWinner ? " winner" : " loser") : "";
+  const cls = decided ? (winSide == null ? "" : (isWinner ? " winner" : " loser")) : "";
   // Show % only when BOTH teams known (head-to-head set) and not yet decided.
   const showProb = match.teamA && match.teamB && !decided;
-  const goals = teamGoals(match, side);
+  let goals = teamGoals(match, side);
+  if (goals == null && ff) goals = side === "A" ? ff.a : ff.b;   // feed score
   let right = "";
   if (decided && goals != null) {
     right = `<span class="team-goals">${goals}</span>`;
@@ -552,20 +576,20 @@ function roundCompleted(key) {
   return ms.length > 0 && ms.every((m) => m.winner != null);
 }
 
-// Default collapse state for a round: only the round being played now
-// (STATE.currentRound) is expanded; completed and not-yet-started rounds
-// auto-hide. The Final always stays open (it's the prize / projection). A manual
-// toggle in collapsedRounds always wins.
+// Default collapse state for a round: hide rounds that are already finished
+// (the ones behind us); keep the current round, upcoming rounds (with their
+// projections) and the Final open. A manual toggle in collapsedRounds wins.
 function defaultCollapsed(key) {
-  return key !== "F" && key !== (STATE.currentRound || "R32");
+  return key !== "F" && roundCompleted(key);
 }
 
 // A slim two-tone bar showing the win-probability split (owner colours).
 function probBar(m) {
   if (!(m.teamA && m.teamB)) return "";
   const ca = ownerColor(m.teamA), cb = ownerColor(m.teamB);
-  if (m.winner) {
-    const c = m.winner === "A" ? ca : cb;
+  const winSide = m.winner != null ? m.winner : feedFinal(m)?.winner;
+  if (winSide) {
+    const c = winSide === "A" ? ca : cb;
     return `<div class="prob-bar"><span style="width:100%;background:${c}"></span></div>`;
   }
   const pa = m.probA != null ? m.probA : 0.5;
@@ -1200,16 +1224,39 @@ function liveHot() {
     return age >= -10 && age <= 200;
   }));
 }
+// Advance just the live minute/score text in existing cards, without rebuilding
+// the whole tree — so the clock stays alive but the page doesn't visibly
+// refresh (redraw/scroll-jump) every poll when nothing actually changed.
+function tickClocks() {
+  if (!STATE) return;
+  document.querySelectorAll("#bracket .match").forEach((card) => {
+    const m = STATE.bracket[card.dataset.round]?.[+card.dataset.mi];
+    if (!m || !isLive(m)) return;
+    const hdr = card.querySelector(".match-time");
+    if (!hdr) return;
+    const tmp = document.createElement("div");
+    tmp.innerHTML = matchHeader(m);
+    if (tmp.firstElementChild) hdr.replaceWith(tmp.firstElementChild);
+  });
+  const nowCard = document.querySelector("#live-strip .nn-card.now");
+  if (nowCard) {
+    const m = STATE.bracket[nowCard.dataset.round]?.[+nowCard.dataset.mi];
+    const lab = nowCard.querySelector(".nn-label");
+    if (m && isLive(m) && lab) {
+      const ls = liveFor(m);
+      lab.innerHTML = `<span class="live-dot"></span>LIVE${ls && ls.minute != null ? ` ${fmtMin(ls.minute)}` : ""}`;
+    }
+  }
+}
+
 async function pollLiveScores() {
   clearTimeout(liveTimer);   // single chain even if called from multiple places
   const hot = liveHot();
   if (!document.hidden) {
     await fetchLiveScores();
     const sig = JSON.stringify(LIVE_SCORES);
-    // Re-render on any change, and also each poll while a game is live so the
-    // interpolated minute ticks forward between feed updates.
-    const anyLive = STATE && ROUND_KEYS.some((k) => (STATE.bracket[k] || []).some(isLive));
-    if ((sig !== lastLiveSig || anyLive) && STATE) {
+    if (sig !== lastLiveSig && STATE) {
+      // Real change (score / scorer / finished) -> full re-render.
       lastLiveSig = sig;
       const sl = $("#bracket").scrollLeft;
       renderTree();
@@ -1217,6 +1264,9 @@ async function pollLiveScores() {
       renderLiveStrip();
       markNextGame();
       if (viewMode === "bracket") requestAnimationFrame(drawConnectors);
+    } else if (STATE) {
+      // No data change: just tick the estimated clock in place (no full redraw).
+      tickClocks();
     }
   }
   liveTimer = setTimeout(pollLiveScores, hot ? 25000 : 120000);
