@@ -16,7 +16,7 @@ let focusRound = null;      // round to scroll to (from a shared link / nav)
 
 // Must match the ?v= on the script tag in index.html. When a newer version is
 // deployed, open pages auto-reload to pick up new code (see checkForUpdate).
-const APP_VERSION = 23;
+const APP_VERSION = 24;
 
 // Initial view/player/round come from the URL (shared links) first, then
 // localStorage, then a width default. Keeps shared links reproducible.
@@ -552,6 +552,14 @@ function roundCompleted(key) {
   return ms.length > 0 && ms.every((m) => m.winner != null);
 }
 
+// Default collapse state for a round: only the round being played now
+// (STATE.currentRound) is expanded; completed and not-yet-started rounds
+// auto-hide. The Final always stays open (it's the prize / projection). A manual
+// toggle in collapsedRounds always wins.
+function defaultCollapsed(key) {
+  return key !== "F" && key !== (STATE.currentRound || "R32");
+}
+
 // A slim two-tone bar showing the win-probability split (owner colours).
 function probBar(m) {
   if (!(m.teamA && m.teamB)) return "";
@@ -660,7 +668,7 @@ function renderBracket() {
     col.dataset.round = key;
     // Completed rounds collapse by default (still scrollable to); a manual
     // toggle is remembered in collapsedRounds.
-    const collapsed = key in collapsedRounds ? collapsedRounds[key] : roundCompleted(key);
+    const collapsed = key in collapsedRounds ? collapsedRounds[key] : defaultCollapsed(key);
     if (collapsed) col.classList.add("collapsed");
 
     const lbl = document.createElement("button");
@@ -800,10 +808,10 @@ function renderFunnel() {
     // D — journey filter: when a player is selected, show only their matches.
     const matches = selectedPlayer ? all.filter((m) => owns(m, selectedPlayer)) : all;
     const known = matches.filter((m) => m.teamA && m.teamB);
-    const hasLive = matches.some((m) => m.teamA && m.teamB && m.winner == null);
     // B — collapse rounds with no live game yet (or completed/past), unless the
-    // user expanded them. Rounds with a live, undecided game stay open.
-    const collapsed = key in collapsedRounds ? collapsedRounds[key] : !hasLive;
+    // user expanded them. Rounds with a live, undecided game stay open; the
+    // Final stays open too (see defaultCollapsed).
+    const collapsed = key in collapsedRounds ? collapsedRounds[key] : defaultCollapsed(key);
 
     const sec = document.createElement("section");
     sec.className = "fround" + (collapsed ? " fcollapsed" : "");
