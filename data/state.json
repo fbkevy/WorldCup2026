@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-01T07:00:33+00:00",
+  "updatedAt": "2026-07-01T07:05:35+00:00",
   "source": "the-odds-api",
   "currentRound": "R32",
   "players": [
@@ -880,5 +880,5 @@
   "postFetched": [
     "r32-3"
   ],
-  "oddsCheckedAt": "2026-07-01T07:00:33+00:00"
+  "oddsCheckedAt": "2026-07-01T07:05:35+00:00"
 }
