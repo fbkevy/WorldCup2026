@@ -32,19 +32,24 @@ SPORT = "soccer_fifa_world_cup"            # individual match (h2h) odds
 WINNER_SPORT = "soccer_fifa_world_cup_winner"  # outright tournament winner (separate key!)
 BASE = "https://api.the-odds-api.com/v4"
 
-# Scheduling: the workflow ticks every 30 min. We only spend API credits when a
-# game is plausibly finishing (poll scores to get the real result — robust to
-# extra time / penalties via the API's `completed` flag) and at a 3x/day odds
-# baseline. Outside those windows the tick exits without any API call.
-BASELINE_HOURS = (7, 13, 19)          # UTC hours for the 3x/day odds refresh
-SCORE_CHECK_MIN = 95                  # start polling a game's result this many
-                                      # minutes after kickoff (regular full time);
-                                      # keeps polling every run until resolved, so
-                                      # both normal-time and penalty finishes catch.
-SCORE_CHECK_MAX = 300                 # stop polling after this (ET + pens + lag)
-ODDS_THROTTLE_MIN = 15                # min minutes between live odds refreshes
+# Credit budget: the paid Odds API is only for ODDS now — results/eliminations
+# come from the free feed (apply_feed_results). So we spend a credit only to
+# refresh odds: at a small daily baseline, and (throttled) while a game is
+# actually being played. The Odds-API result endpoint is kept as a rare safety
+# net for a game the free feed somehow failed to resolve for hours.
+BASELINE_HOURS = (7, 19)              # UTC hours for the 2x/day odds baseline
+ODDS_THROTTLE_MIN = 30                # min minutes between live odds refreshes
+LIVE_ODDS_MAX = 130                   # only refresh live odds while a game is
+                                      # actually on (mins after KO), not for hours
+STALE_PENDING_MIN = 180               # only fall back to the paid result endpoint
+                                      # if the free feed hasn't resolved a game
+                                      # this many minutes after kickoff
+CREDIT_RESERVE = 30                   # stop spending on live odds below this many
+                                      # remaining credits (baseline still probes,
+                                      # so it self-heals after the monthly reset)
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 STATE_PATH = ROOT / "data" / "state.json"
+API_REMAINING = None                  # x-requests-remaining from the last call
 
 # The Odds API team names -> our names. Add entries if a team is missing.
 NAME_MAP = {
@@ -70,12 +75,17 @@ def canon(name):
 
 
 def api_get(path, params):
+    global API_REMAINING
     params = {**params, "apiKey": os.environ["ODDS_API_KEY"]}
     url = f"{BASE}{path}?{urllib.parse.urlencode(params)}"
     with urllib.request.urlopen(url, timeout=30) as r:
         remaining = r.headers.get("x-requests-remaining")
         if remaining is not None:
             print(f"  credits remaining: {remaining}", file=sys.stderr)
+            try:
+                API_REMAINING = int(remaining)
+            except ValueError:
+                pass
         return json.load(r)
 
 
@@ -308,20 +318,6 @@ def resolve_penalties(level_matches, alive_set):
     return decided
 
 
-def games_finishing(state, now):
-    """Ids of undecided, known matches currently in their result-polling window."""
-    ids = []
-    for rnd in state["bracket"].values():
-        for m in rnd:
-            if m.get("teamA") and m.get("teamB") and m.get("winner") is None:
-                ko = parse_iso(m.get("kickoff"))
-                if ko:
-                    age = (now - ko).total_seconds() / 60
-                    if SCORE_CHECK_MIN <= age <= SCORE_CHECK_MAX:
-                        ids.append(m["id"])
-    return ids
-
-
 def fetch_and_apply_odds(state, regions):
     """Refresh outright + h2h probabilities into state (in place)."""
     win = fetch_outrights(regions)
@@ -393,11 +389,12 @@ def main():
 
     baseline = now.hour in BASELINE_HOURS and now.minute < 30
 
-    # Any past-kickoff game still without a winner (incl. one a missed/late cron
-    # never caught). No upper time bound — so nothing can be silently left
-    # unresolved. We check these on EVERY run (GitHub's cron is unreliable, and
-    # credits are plentiful), not just at the baseline.
-    pending, inplay = [], []
+    # Classify undecided known matches by their age since kickoff:
+    #   * inplay_odds  — actually being played -> worth a (throttled) live-odds
+    #                    refresh; bounded so we don't refresh odds for hours.
+    #   * stale_pending — the free feed *should* have resolved it by now; only
+    #                    then do we spend paid credits on the result endpoint.
+    inplay_odds, stale_pending = [], []
     for rnd in state["bracket"].values():
         for m in rnd:
             if m.get("teamA") and m.get("teamB") and m.get("winner") is None:
@@ -405,12 +402,12 @@ def main():
                 if not ko:
                     continue
                 age = (now - ko).total_seconds() / 60
-                if age >= SCORE_CHECK_MIN:
-                    pending.append(m["id"])
-                if 0 <= age <= SCORE_CHECK_MAX:
-                    inplay.append(m["id"])   # in play / just finished -> live odds
+                if -5 <= age <= LIVE_ODDS_MAX:
+                    inplay_odds.append(m["id"])
+                if age >= STALE_PENDING_MIN:
+                    stale_pending.append(m["id"])
 
-    check_results = forced or bool(pending)
+    check_results = forced or bool(stale_pending)
 
     if not have_key:
         print("No ODDS_API_KEY — running on the free result feed only "
@@ -427,13 +424,13 @@ def main():
         newly += feed_newly
         changed = True
 
-    # 1b) Odds API results as a secondary check (extra time / anything the feed
-    #     missed) + penalty fallback via the outright market. NON-FATAL: a dead
-    #     or quota'd key must never abort the run and block the feed's results.
+    # 1b) Paid result endpoint ONLY as a rare safety net — a game the free feed
+    #     hasn't resolved hours after kickoff. NON-FATAL: a dead/quota'd key must
+    #     never abort the run and block the feed's results.
     if have_key and check_results:
         try:
-            print(f"Checking results — pending:{len(pending)} inplay:{len(inplay)}"
-                  f"{' (forced)' if forced else ''}", file=sys.stderr)
+            print(f"Feed miss — checking paid results for {len(stale_pending)} "
+                  f"stale game(s){' (forced)' if forced else ''}", file=sys.stderr)
             api_newly, level = apply_scores(state, fetch_scores())
             if level:
                 api_newly += resolve_penalties(level, set(fetch_outrights(regions)))
@@ -441,33 +438,54 @@ def main():
                 newly += api_newly
                 changed = True
         except Exception as e:  # noqa: BLE001
-            print(f"Odds API result check failed (continuing on feed): {e}", file=sys.stderr)
+            print(f"Paid result check failed (continuing on feed): {e}", file=sys.stderr)
 
     # Advance BEFORE fetching odds so any newly-revealed next-round matchups get
     # their kickoff time + h2h odds in this same run (no one-cycle lag).
     wc_lib.advance(state)
 
-    # 2) Refresh odds: at the baseline, when forced, when a result just landed,
-    #    OR while a game is in play — throttled. NON-FATAL: skips silently once
-    #    credits run out, so eliminations (from the feed) still commit.
+    # 2) Refresh odds — the only routine credit spend. At the daily baseline,
+    #    when forced, when a result just landed, or (throttled) while a game is
+    #    actually being played. Below the reserve we still probe at the baseline
+    #    (2x/day) so it self-heals after the monthly reset, but skip live odds.
+    prev_remaining = state.get("apiRemaining")
+    reserve_ok = prev_remaining is None or prev_remaining > CREDIT_RESERVE
     last_odds = parse_iso(state.get("oddsCheckedAt"))
     odds_due = last_odds is None or (now - last_odds).total_seconds() / 60 >= ODDS_THROTTLE_MIN
-    if have_key and (baseline or forced or newly or (inplay and odds_due)):
+    # The workflow ticks every ~5 min, so EVERYTHING except a fresh result is
+    # throttled to at most one refresh per ODDS_THROTTLE_MIN — otherwise a
+    # baseline/live window would refresh 6x. Baseline still probes below the
+    # reserve (self-heals after the monthly reset); live odds do not.
+    want_odds = (forced or newly
+                 or (baseline and odds_due)
+                 or (bool(inplay_odds) and odds_due and reserve_ok))
+    if have_key and want_odds:
         try:
             fetch_and_apply_odds(state, regions)
             state["oddsCheckedAt"] = now.isoformat()
             changed = True
         except Exception as e:  # noqa: BLE001
             print(f"Odds refresh failed (continuing): {e}", file=sys.stderr)
+    elif have_key and bool(inplay_odds) and odds_due and not reserve_ok:
+        print(f"Conserving credits (remaining {prev_remaining}) — skipping live "
+              f"odds; results still tracked via the free feed.", file=sys.stderr)
 
-    if not (check_results or baseline or inplay):
-        print("Nothing due — no API call.", file=sys.stderr)
+    # Remember the credit balance so the reserve guard works across runs.
+    if API_REMAINING is not None:
+        state["apiRemaining"] = API_REMAINING
+
+    if not (check_results or baseline or inplay_odds):
+        print("Nothing due — no paid API call.", file=sys.stderr)
 
     # When a result lands, freeze each player's pre-result rank so the site can
     # show stock-exchange ▲/▼ movement until the next match decides.
     if newly:
         for p in state["players"]:
             p["prevRank"] = ranks_before[p["id"]]
+
+    # Persist a bare credit-balance update even if nothing else changed, so the
+    # reserve guard reflects spend from a probe that found no new result.
+    credit_only = not changed and API_REMAINING is not None and API_REMAINING != prev_remaining
 
     if changed:
         # Projected reach-% for every team (drives the coloured future-bracket
@@ -479,6 +497,10 @@ def main():
                               encoding="utf-8")
         append_history(state)
         print("Wrote", STATE_PATH, file=sys.stderr)
+    elif credit_only:
+        STATE_PATH.write_text(json.dumps(state, indent=2, ensure_ascii=False),
+                              encoding="utf-8")
+        print(f"Credit balance updated ({API_REMAINING}) — no data change.", file=sys.stderr)
     else:
         print("No state change — not writing.", file=sys.stderr)
 
