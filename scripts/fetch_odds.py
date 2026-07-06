@@ -158,6 +158,93 @@ def fetch_scores():
     return api_get(f"/sports/{SPORT}/scores", {"daysFrom": 3})
 
 
+# ---- Free result feed (worldcup26.ir): no key, no quota. Primary source for
+#      resolving finished matches so eliminations keep working even when the
+#      paid Odds API runs out of monthly credits. ----
+LIVE_FEED_URL = "https://worldcup26.ir/get/games"
+FEED_NAME_MAP = {
+    "Bosnia and Herzegovina": "Bosnia", "Czech Republic": "Czechia",
+    "Democratic Republic of the Congo": "DR Congo", "South Korea": "Korea Republic",
+    "Turkey": "Türkiye", "United States": "USA", "Cote d'Ivoire": "Ivory Coast",
+    "Cabo Verde": "Cape Verde", "Curacao": "Curaçao",
+}
+
+
+def feed_canon(n):
+    return FEED_NAME_MAP.get((n or "").strip(), (n or "").strip())
+
+
+def _to_int(v):
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def fetch_live_feed():
+    """Whole-tournament game list with statuses/scores. Returns [] on failure."""
+    try:
+        req = urllib.request.Request(LIVE_FEED_URL, headers={"User-Agent": "wc-bot"})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return json.load(r).get("games", [])
+    except Exception as e:  # noqa: BLE001 — best-effort, never fatal
+        print(f"live feed fetch failed: {e}", file=sys.stderr)
+        return []
+
+
+def apply_feed_results(state):
+    """Set winner + score on finished bracket matches using the free feed.
+
+    Handles penalty shootouts via the feed's penalty tallies. Only knockout
+    feed games are considered (skip single-letter group-stage entries) to avoid
+    matching an unrelated earlier meeting. Returns ids newly decided.
+    """
+    finished = {}
+    for g in fetch_live_feed():
+        grp = str(g.get("group", "")).strip().upper()
+        if len(grp) == 1 and grp.isalpha():       # group stage — ignore
+            continue
+        te = str(g.get("time_elapsed", "")).lower()
+        if not (te == "finished" or str(g.get("finished", "")).upper() == "TRUE"):
+            continue
+        h, a = feed_canon(g.get("home_team_name_en")), feed_canon(g.get("away_team_name_en"))
+        hs, as_ = _to_int(g.get("home_score")), _to_int(g.get("away_score"))
+        if not h or not a or hs is None or as_ is None:
+            continue
+        finished[frozenset((h, a))] = {
+            "h": h, "hs": hs, "as": as_,
+            "hp": _to_int(g.get("home_penalty_score")),
+            "ap": _to_int(g.get("away_penalty_score")),
+        }
+
+    newly = []
+    for rnd in state["bracket"].values():
+        for m in rnd:
+            a_name, b_name = m.get("teamA"), m.get("teamB")
+            if not (a_name and b_name) or m.get("winner") is not None:
+                continue
+            g = finished.get(frozenset((a_name, b_name)))
+            if not g:
+                continue
+            sa = g["hs"] if a_name == g["h"] else g["as"]
+            sb = g["hs"] if b_name == g["h"] else g["as"]
+            m["score"] = f"{sa}–{sb}"
+            if sa != sb:
+                m["winner"] = "A" if sa > sb else "B"
+                newly.append(m["id"])
+                print(f"Feed result: {a_name} {sa}-{sb} {b_name} -> {m['winner']}", file=sys.stderr)
+            else:
+                pa = g["hp"] if a_name == g["h"] else g["ap"]
+                pb = g["hp"] if b_name == g["h"] else g["ap"]
+                if pa is not None and pb is not None and pa != pb:
+                    m["winner"] = "A" if pa > pb else "B"
+                    m["score"] = f"{sa}–{sb} ({pa}-{pb} p)"
+                    newly.append(m["id"])
+                    print(f"Feed shootout: {a_name} v {b_name} {sa}-{sb} pens {pa}-{pb} "
+                          f"-> {m['winner']}", file=sys.stderr)
+    return newly
+
+
 def apply_scores(state, events):
     """Set winner + score on any undecided bracket match that has finished.
 
@@ -325,37 +412,53 @@ def main():
 
     check_results = forced or bool(pending)
 
-    if not have_key and (check_results or baseline or inplay):
-        print("ERROR: ODDS_API_KEY not set", file=sys.stderr)
-        sys.exit(1)
+    if not have_key:
+        print("No ODDS_API_KEY — running on the free result feed only "
+              "(odds won't refresh).", file=sys.stderr)
 
     changed = False
     newly = []
 
-    # 1) Poll results -> auto-set winners. Penalty shootouts (level scores) are
-    #    resolved from the outright market (the loser drops out).
+    # 1a) Resolve finished matches from the FREE feed first (no key, no quota).
+    #     Primary elimination source — keeps working when the paid Odds API is
+    #     exhausted or unset.
+    feed_newly = apply_feed_results(state)
+    if feed_newly:
+        newly += feed_newly
+        changed = True
+
+    # 1b) Odds API results as a secondary check (extra time / anything the feed
+    #     missed) + penalty fallback via the outright market. NON-FATAL: a dead
+    #     or quota'd key must never abort the run and block the feed's results.
     if have_key and check_results:
-        print(f"Checking results — pending:{len(pending)} inplay:{len(inplay)}"
-              f"{' (forced)' if forced else ''}", file=sys.stderr)
-        newly, level = apply_scores(state, fetch_scores())
-        if level:
-            newly += resolve_penalties(level, set(fetch_outrights(regions)))
-        if newly:
-            changed = True
+        try:
+            print(f"Checking results — pending:{len(pending)} inplay:{len(inplay)}"
+                  f"{' (forced)' if forced else ''}", file=sys.stderr)
+            api_newly, level = apply_scores(state, fetch_scores())
+            if level:
+                api_newly += resolve_penalties(level, set(fetch_outrights(regions)))
+            if api_newly:
+                newly += api_newly
+                changed = True
+        except Exception as e:  # noqa: BLE001
+            print(f"Odds API result check failed (continuing on feed): {e}", file=sys.stderr)
 
     # Advance BEFORE fetching odds so any newly-revealed next-round matchups get
     # their kickoff time + h2h odds in this same run (no one-cycle lag).
     wc_lib.advance(state)
 
     # 2) Refresh odds: at the baseline, when forced, when a result just landed,
-    #    OR while a game is in play (live odds) — but throttled so frequent
-    #    result-polling doesn't burn credits on odds every few minutes.
+    #    OR while a game is in play — throttled. NON-FATAL: skips silently once
+    #    credits run out, so eliminations (from the feed) still commit.
     last_odds = parse_iso(state.get("oddsCheckedAt"))
     odds_due = last_odds is None or (now - last_odds).total_seconds() / 60 >= ODDS_THROTTLE_MIN
     if have_key and (baseline or forced or newly or (inplay and odds_due)):
-        fetch_and_apply_odds(state, regions)
-        state["oddsCheckedAt"] = now.isoformat()
-        changed = True
+        try:
+            fetch_and_apply_odds(state, regions)
+            state["oddsCheckedAt"] = now.isoformat()
+            changed = True
+        except Exception as e:  # noqa: BLE001
+            print(f"Odds refresh failed (continuing): {e}", file=sys.stderr)
 
     if not (check_results or baseline or inplay):
         print("Nothing due — no API call.", file=sys.stderr)
