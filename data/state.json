@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-07T07:04:12+00:00",
+  "updatedAt": "2026-07-07T15:58:28+00:00",
   "source": "the-odds-api",
   "currentRound": "R16",
   "players": [
@@ -103,15 +103,15 @@
   "teams": {
     "Spain": {
       "owner": "paul",
-      "winProb": 0.19632,
+      "winProb": 0.19615,
       "alive": true,
       "reach": {
         "R32": 1.0,
         "R16": 1.0,
         "QF": 1.0,
-        "SF": 0.766,
-        "F": 0.35172,
-        "W": 0.19632
+        "SF": 0.774,
+        "F": 0.35289,
+        "W": 0.19614
       }
     },
     "Ecuador": {
@@ -144,15 +144,15 @@
     },
     "France": {
       "owner": "caoimh",
-      "winProb": 0.3274,
+      "winProb": 0.32711,
       "alive": true,
       "reach": {
         "R32": 1.0,
         "R16": 1.0,
         "QF": 1.0,
-        "SF": 0.794,
-        "F": 0.50397,
-        "W": 0.32743
+        "SF": 0.797,
+        "F": 0.504,
+        "W": 0.32714
       }
     },
     "Mexico": {
@@ -193,28 +193,28 @@
     },
     "England": {
       "owner": "fran",
-      "winProb": 0.14943,
+      "winProb": 0.15164,
       "alive": true,
       "reach": {
         "R32": 1.0,
         "R16": 1.0,
         "QF": 1.0,
-        "SF": 0.68,
-        "F": 0.34934,
-        "W": 0.14943
+        "SF": 0.684,
+        "F": 0.35327,
+        "W": 0.15163
       }
     },
     "Norway": {
       "owner": "fran",
-      "winProb": 0.05166,
+      "winProb": 0.05228,
       "alive": true,
       "reach": {
         "R32": 1.0,
         "R16": 1.0,
         "QF": 1.0,
-        "SF": 0.32,
-        "F": 0.14257,
-        "W": 0.05166
+        "SF": 0.316,
+        "F": 0.14259,
+        "W": 0.05228
       }
     },
     "Japan": {
@@ -242,15 +242,15 @@
     },
     "Egypt": {
       "owner": "fran",
-      "winProb": 0.00356,
+      "winProb": 0.00353,
       "alive": true,
       "reach": {
         "R32": 1.0,
         "R16": 1.0,
-        "QF": 0.116,
-        "SF": 0.04684,
-        "F": 0.01468,
-        "W": 0.00356
+        "QF": 0.108,
+        "SF": 0.04441,
+        "F": 0.01417,
+        "W": 0.00353
       }
     },
     "DR Congo": {
@@ -290,28 +290,28 @@
     },
     "Belgium": {
       "owner": "kev",
-      "winProb": 0.02551,
+      "winProb": 0.02614,
       "alive": true,
       "reach": {
         "R32": 1.0,
         "R16": 1.0,
         "QF": 1.0,
-        "SF": 0.234,
-        "F": 0.0682,
-        "W": 0.02551
+        "SF": 0.226,
+        "F": 0.06784,
+        "W": 0.02614
       }
     },
     "Morocco": {
       "owner": "kev",
-      "winProb": 0.02916,
+      "winProb": 0.02913,
       "alive": true,
       "reach": {
         "R32": 1.0,
         "R16": 1.0,
         "QF": 1.0,
-        "SF": 0.206,
-        "F": 0.07611,
-        "W": 0.02915
+        "SF": 0.203,
+        "F": 0.07528,
+        "W": 0.02912
       }
     },
     "USA": {
@@ -367,15 +367,15 @@
     },
     "Argentina": {
       "owner": "dave",
-      "winProb": 0.16957,
+      "winProb": 0.16639,
       "alive": true,
       "reach": {
         "R32": 1.0,
         "R16": 1.0,
-        "QF": 0.884,
-        "SF": 0.59651,
-        "F": 0.34812,
-        "W": 0.16956
+        "QF": 0.892,
+        "SF": 0.59716,
+        "F": 0.34438,
+        "W": 0.16638
       }
     },
     "Germany": {
@@ -441,28 +441,28 @@
     },
     "Colombia": {
       "owner": "dec",
-      "winProb": 0.03551,
+      "winProb": 0.03548,
       "alive": true,
       "reach": {
         "R32": 1.0,
         "R16": 1.0,
-        "QF": 0.611,
-        "SF": 0.23554,
-        "F": 0.10239,
-        "W": 0.03551
+        "QF": 0.609,
+        "SF": 0.23563,
+        "F": 0.10203,
+        "W": 0.03548
       }
     },
     "Switzerland": {
       "owner": "dec",
-      "winProb": 0.01188,
+      "winProb": 0.01216,
       "alive": true,
       "reach": {
         "R32": 1.0,
         "R16": 1.0,
-        "QF": 0.389,
-        "SF": 0.12111,
-        "F": 0.04291,
-        "W": 0.01188
+        "QF": 0.391,
+        "SF": 0.1228,
+        "F": 0.04355,
+        "W": 0.01216
       }
     },
     "Austria": {
@@ -738,17 +738,17 @@
         "id": "r16-7",
         "teamA": "Argentina",
         "teamB": "Egypt",
-        "probA": 0.884,
-        "probB": 0.116,
+        "probA": 0.892,
+        "probB": 0.108,
         "winner": null,
-        "kickoff": "2026-07-07T16:00:00Z"
+        "kickoff": "2026-07-07T16:05:00Z"
       },
       {
         "id": "r16-8",
         "teamA": "Switzerland",
         "teamB": "Colombia",
-        "probA": 0.389,
-        "probB": 0.611,
+        "probA": 0.391,
+        "probB": 0.609,
         "winner": null,
         "kickoff": "2026-07-07T20:00:00Z"
       }
@@ -758,8 +758,8 @@
         "id": "qf-1",
         "teamA": "France",
         "teamB": "Morocco",
-        "probA": 0.794,
-        "probB": 0.206,
+        "probA": 0.797,
+        "probB": 0.203,
         "winner": null,
         "kickoff": "2026-07-09T20:00:00Z"
       },
@@ -767,8 +767,8 @@
         "id": "qf-2",
         "teamA": "Spain",
         "teamB": "Belgium",
-        "probA": 0.766,
-        "probB": 0.234,
+        "probA": 0.774,
+        "probB": 0.226,
         "winner": null,
         "kickoff": "2026-07-10T19:00:00Z"
       },
@@ -776,8 +776,8 @@
         "id": "qf-3",
         "teamA": "Norway",
         "teamB": "England",
-        "probA": 0.32,
-        "probB": 0.68,
+        "probA": 0.316,
+        "probB": 0.684,
         "winner": null,
         "kickoff": "2026-07-11T21:00:00Z"
       },
@@ -826,6 +826,6 @@
   "postFetched": [
     "r32-3"
   ],
-  "oddsCheckedAt": "2026-07-07T07:04:12+00:00",
-  "apiRemaining": 466
+  "oddsCheckedAt": "2026-07-07T15:58:28+00:00",
+  "apiRemaining": 464
 }
