@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-12T04:12:47+00:00",
+  "updatedAt": "2026-07-12T07:04:36+00:00",
   "source": "the-odds-api",
   "currentRound": "SF",
   "players": [
@@ -103,15 +103,15 @@
   "teams": {
     "Spain": {
       "owner": "paul",
-      "winProb": 0.22225,
+      "winProb": 0.22326,
       "alive": true,
       "reach": {
         "R32": 1.0,
         "R16": 1.0,
         "QF": 1.0,
         "SF": 1.0,
-        "F": 0.412,
-        "W": 0.2222
+        "F": 0.414,
+        "W": 0.22321
       }
     },
     "Ecuador": {
@@ -144,15 +144,15 @@
     },
     "France": {
       "owner": "caoimh",
-      "winProb": 0.36957,
+      "winProb": 0.37398,
       "alive": true,
       "reach": {
         "R32": 1.0,
         "R16": 1.0,
         "QF": 1.0,
         "SF": 1.0,
-        "F": 0.588,
-        "W": 0.36963
+        "F": 0.586,
+        "W": 0.37405
       }
     },
     "Mexico": {
@@ -193,15 +193,15 @@
     },
     "England": {
       "owner": "fran",
-      "winProb": 0.20726,
+      "winProb": 0.21684,
       "alive": true,
       "reach": {
         "R32": 1.0,
         "R16": 1.0,
         "QF": 1.0,
         "SF": 1.0,
-        "F": 0.532,
-        "W": 0.20726
+        "F": 0.55,
+        "W": 0.21685
       }
     },
     "Norway": {
@@ -354,15 +354,15 @@
     },
     "Argentina": {
       "owner": "dave",
-      "winProb": 0.20092,
+      "winProb": 0.18592,
       "alive": true,
       "reach": {
         "R32": 1.0,
         "R16": 1.0,
         "QF": 1.0,
         "SF": 1.0,
-        "F": 0.468,
-        "W": 0.20091
+        "F": 0.45,
+        "W": 0.1859
       }
     },
     "Germany": {
@@ -782,8 +782,8 @@
         "id": "sf-1",
         "teamA": "France",
         "teamB": "Spain",
-        "probA": 0.588,
-        "probB": 0.412,
+        "probA": 0.586,
+        "probB": 0.414,
         "winner": null,
         "kickoff": "2026-07-14T19:00:00Z"
       },
@@ -791,8 +791,8 @@
         "id": "sf-2",
         "teamA": "England",
         "teamB": "Argentina",
-        "probA": 0.532,
-        "probB": 0.468,
+        "probA": 0.55,
+        "probB": 0.45,
         "winner": null,
         "kickoff": "2026-07-15T19:00:00Z"
       }
@@ -812,6 +812,6 @@
   "postFetched": [
     "r32-3"
   ],
-  "oddsCheckedAt": "2026-07-12T04:12:47+00:00",
-  "apiRemaining": 350
+  "oddsCheckedAt": "2026-07-12T07:04:36+00:00",
+  "apiRemaining": 348
 }
