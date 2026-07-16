@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-16T07:04:17+00:00",
+  "updatedAt": "2026-07-16T19:04:34+00:00",
   "source": "the-odds-api",
   "currentRound": "F",
   "players": [
@@ -111,7 +111,7 @@
         "QF": 1.0,
         "SF": 1.0,
         "F": 1.0,
-        "W": 0.607
+        "W": 0.608
       }
     },
     "Ecuador": {
@@ -358,7 +358,7 @@
         "QF": 1.0,
         "SF": 1.0,
         "F": 1.0,
-        "W": 0.393
+        "W": 0.392
       }
     },
     "Germany": {
@@ -800,8 +800,8 @@
         "id": "f-1",
         "teamA": "Spain",
         "teamB": "Argentina",
-        "probA": 0.607,
-        "probB": 0.393,
+        "probA": 0.608,
+        "probB": 0.392,
         "winner": null,
         "kickoff": "2026-07-19T19:00:00Z"
       }
@@ -810,6 +810,6 @@
   "postFetched": [
     "r32-3"
   ],
-  "oddsCheckedAt": "2026-07-16T07:04:17+00:00",
-  "apiRemaining": 302
+  "oddsCheckedAt": "2026-07-16T19:04:34+00:00",
+  "apiRemaining": 298
 }
