@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-19T20:19:36+00:00",
+  "updatedAt": "2026-07-19T20:49:49+00:00",
   "source": "the-odds-api",
   "currentRound": "F",
   "players": [
@@ -103,7 +103,7 @@
   "teams": {
     "Spain": {
       "owner": "paul",
-      "winProb": 0.60004,
+      "winProb": 0.62382,
       "alive": true,
       "reach": {
         "R32": 1.0,
@@ -111,7 +111,7 @@
         "QF": 1.0,
         "SF": 1.0,
         "F": 1.0,
-        "W": 0.644
+        "W": 0.681
       }
     },
     "Ecuador": {
@@ -350,7 +350,7 @@
     },
     "Argentina": {
       "owner": "dave",
-      "winProb": 0.39996,
+      "winProb": 0.37618,
       "alive": true,
       "reach": {
         "R32": 1.0,
@@ -358,7 +358,7 @@
         "QF": 1.0,
         "SF": 1.0,
         "F": 1.0,
-        "W": 0.356
+        "W": 0.319
       }
     },
     "Germany": {
@@ -800,8 +800,8 @@
         "id": "f-1",
         "teamA": "Spain",
         "teamB": "Argentina",
-        "probA": 0.644,
-        "probB": 0.356,
+        "probA": 0.681,
+        "probB": 0.319,
         "winner": null,
         "kickoff": "2026-07-19T19:05:00Z"
       }
@@ -810,6 +810,6 @@
   "postFetched": [
     "r32-3"
   ],
-  "oddsCheckedAt": "2026-07-19T20:19:36+00:00",
-  "apiRemaining": 272
+  "oddsCheckedAt": "2026-07-19T20:49:49+00:00",
+  "apiRemaining": 270
 }
