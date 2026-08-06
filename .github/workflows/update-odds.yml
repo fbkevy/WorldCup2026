@@ -1,19 +1,16 @@
 name: Update odds
 
-# Reliability note: GitHub throttles scheduled crons hard (a "*/10" job often
-# only fires every 1-2 hours). So instead of relying on the schedule, each run
-# LOOPS internally every 5 min for ~55 min, then re-arms the next run via
-# workflow_dispatch (which GitHub honours immediately). The hourly schedule is
-# just a backstop to restart the chain if it ever breaks.
+# RETIRED 2026-08-06: the World Cup is over, so the automation is discontinued.
+# The schedule/cron and the self-re-arm step have been removed so this workflow
+# never runs on its own again. It's left here (manual-dispatch only) for archive
+# reference; to fully revive it you'd restore the `schedule:` trigger and the
+# "Re-arm the next run" step below.
 
 on:
-  schedule:
-    - cron: "7 * * * *"     # hourly backstop
-  workflow_dispatch: {}
+  workflow_dispatch: {}     # manual only — no schedule, no self-re-arm
 
 permissions:
   contents: write
-  actions: write           # needed to re-arm the next run
 
 concurrency:
   group: update-odds       # at most one running + one pending; no pile-ups
@@ -29,13 +26,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - name: Re-arm the next run
-        # Dispatch up front so the chain continues even if this run later fails.
-        # Concurrency queues it to start right after this ~55-min loop ends.
-        run: gh workflow run "Update odds" --repo "$GITHUB_REPOSITORY" || true
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Poll results + odds (every 5 min for ~55 min)
         env:
